@@ -26,3 +26,7 @@ Liberias
 -Pygame-gui:pip install pygame_gui
 
 Nota: Si quieres instalar automaticamente todas las libreria ejecuta python setup.py 
+
+Para guardar las dependencias : 
+-Ejecuta : pip freeze > requirements.txt
+-Modifica: setup.py
