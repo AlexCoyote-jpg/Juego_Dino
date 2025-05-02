@@ -80,7 +80,7 @@ configuracion = cargar_configuracion(ruta_config)
 # Acceso a la configuración
 # print(configuracion.pantalla)
 # print(configuracion.colores)
-# print(configuracion.imagenes)
+#print(configuracion.imagenes)
 # print(configuracion.sonidos)
 # Acceso a los colores
 # print(configuracion.colores.get("fondo"))
