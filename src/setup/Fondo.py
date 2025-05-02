@@ -52,15 +52,67 @@ def estrellas_animadas(
 ):
     """
     Dibuja y anima estrellas infantiles en el fondo.
-    El número de estrellas y el refresco se adaptan automáticamente.
-    Se adapta en tiempo real al redimensionar la ventana.
+    Ahora las estrellas se mueven suavemente y parpadean.
     """
     clock = pygame.time.Clock()
     corriendo = True
-    tiempo_cambio = 0
-    intervalo_ms = 1000  # Cambia cada segundo
-
     ancho, alto = pantalla.get_size()
+
+    class Estrella:
+        def __init__(self, ancho, alto):
+            self.radio = random.randint(16, 32)
+            self.x = random.uniform(self.radio, ancho - self.radio)
+            self.y = random.uniform(self.radio, alto - self.radio)
+            self.color = random.choice([
+                (255, 255, 255), (255, 255, 200), (255, 240, 180), (255, 235, 255)
+            ])
+            self.puntos = random.choice([5, 6, 7])
+            # Movimiento
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(10, 40) / 60.0  # píxeles por frame
+            self.dx = math.cos(angle) * speed
+            self.dy = math.sin(angle) * speed
+            # Parpadeo
+            self.base_radio = self.radio
+            self.fase = random.uniform(0, 2 * math.pi)
+            self.parpadeo_vel = random.uniform(1.5, 2.5)
+        def update(self, ancho, alto):
+            # Movimiento
+            self.x += self.dx
+            self.y += self.dy
+            # Rebote en bordes
+            if self.x < self.radio or self.x > ancho - self.radio:
+                self.dx *= -1
+            if self.y < self.radio or self.y > alto - self.radio:
+                self.dy *= -1
+            # Parpadeo
+            self.fase += self.parpadeo_vel * 0.03
+            self.radio = int(self.base_radio * (0.85 + 0.15 * math.sin(self.fase)))
+        def draw(self, surface):
+            dibujar_estrella(surface, self.color, (int(self.x), int(self.y)), self.radio, points=self.puntos)
+
+    def crear_fondo(ancho, alto):
+        surf = pygame.Surface((ancho, alto))
+        dibujar_gradiente(surf, color_fondo1, color_fondo2, vertical=True)
+        return surf
+
+    def crear_estrellas(ancho, alto):
+        area = ancho * alto
+        num_estrellas = min(max(area // 30000, 6), max_estrellas)
+        estrellas = []
+        intentos = 0
+        while len(estrellas) < num_estrellas and intentos < num_estrellas * 20:
+            nueva = Estrella(ancho, alto)
+            rect_nueva = pygame.Rect(nueva.x - nueva.radio, nueva.y - nueva.radio, nueva.radio * 2, nueva.radio * 2)
+            if all(not rect_nueva.colliderect(
+                pygame.Rect(e.x - e.radio, e.y - e.radio, e.radio * 2, e.radio * 2)
+            ) for e in estrellas):
+                estrellas.append(nueva)
+            intentos += 1
+        return estrellas
+
+    fondo = crear_fondo(ancho, alto)
+    estrellas = crear_estrellas(ancho, alto)
 
     while corriendo:
         redimensionar = False
@@ -70,33 +122,18 @@ def estrellas_animadas(
             elif evento.type == pygame.VIDEORESIZE:
                 ancho, alto = evento.w, evento.h
                 pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
+                fondo = crear_fondo(ancho, alto)
+                estrellas = crear_estrellas(ancho, alto)
                 redimensionar = True
 
-        # Solo cambia las estrellas si ha pasado el intervalo o si se redimensionó
-        tiempo_cambio += clock.get_time()
-        if tiempo_cambio >= intervalo_ms or redimensionar:
-            ancho, alto = pantalla.get_size()
-            area = ancho * alto
-            num_estrellas = min(max(area // 30000, 6), max_estrellas)
-            dibujar_gradiente(pantalla, color_fondo1, color_fondo2, vertical=True)
-            ocupados = []
-            for _ in range(num_estrellas):
-                for _ in range(10):
-                    radio = random.randint(16, 32)
-                    x = random.randint(radio, ancho - radio)
-                    y = random.randint(radio, alto - radio)
-                    rect = pygame.Rect(x - radio, y - radio, radio * 2, radio * 2)
-                    if no_superpone(rect, ocupados):
-                        color = random.choice([
-                            (255, 255, 255), (255, 255, 200), (255, 240, 180), (255, 235, 255)
-                        ])
-                        dibujar_estrella(pantalla, color, (x, y), radio, points=random.choice([5,6,7]))
-                        ocupados.append(rect)
-                        break
-            pygame.display.flip()
-            tiempo_cambio = 0
-
-        clock.tick()  # Se adapta automáticamente a los FPS
+        # Actualiza y dibuja
+        frame = fondo.copy()
+        for estrella in estrellas:
+            estrella.update(ancho, alto)
+            estrella.draw(frame)
+        pantalla.blit(frame, (0, 0))
+        pygame.display.flip()
+        clock.tick(30)  # 30 FPS para animación suave
 
 # Ejemplo de uso:
 '''
