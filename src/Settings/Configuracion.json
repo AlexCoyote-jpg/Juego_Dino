@@ -9,12 +9,12 @@
         "boton_hover": [100, 149, 237]
     },
     "imagenes": {
-        "fondo": "imagenes/fondo.png",
-        "boton": "imagenes/boton.png",
-        "icono": "imagenes/icono.png"
+        "dino1": "imagenes/dino1.png",
+        "dino2": "imagenes/dino2.png",
+        "dino3": "imagenes/dino3.png"
     },
     "sonidos": {
-        "fondo": "sonidos/acierto.wav",
-        "icono": "sonidos/error.wav"
+        "acierto": "sonidos/acierto.wav",
+        "error": "sonidos/error.wav"
     }
 }
