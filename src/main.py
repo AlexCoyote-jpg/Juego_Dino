@@ -2,6 +2,7 @@
 import pygame
 import setup.Carga_Configs
 from setup.Fondo import estrellas_animadas, crear_fondo, crear_estrellas
+from menu import MenuPrincipal  # Asegúrate de importar tu menú
 
 def main():
     pygame.init()
@@ -13,20 +14,16 @@ def main():
     fondo = crear_fondo(ancho, alto)
     estrellas = crear_estrellas(ancho, alto)
 
-    clock = pygame.time.Clock()
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.VIDEORESIZE:
-                ancho, alto = event.w, event.h
-                pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
-                fondo = crear_fondo(ancho, alto)
-                estrellas = crear_estrellas(ancho, alto)
-
-        estrellas_animadas(pantalla, estrellas, fondo, ancho, alto)
-        clock.tick(30)
+    # Pasa las variables y funciones necesarias al menú
+    menu = MenuPrincipal(
+        pantalla,
+        estrellas,
+        fondo,
+        estrellas_animadas,
+        crear_fondo,
+        crear_estrellas
+    )
+    menu.ejecutar()
 
     pygame.quit()
 
