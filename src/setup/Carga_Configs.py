@@ -64,6 +64,9 @@ prompt_inicial = cargar_prompt_inicial(ruta_conex)
 ruta_config = os.path.join(os.path.dirname(__file__), "../Settings/Configuracion.json")
 configuracion = cargar_configuracion(ruta_config)
 
+ANCHO = configuracion.pantalla.get("ancho")  # Ancho por defecto
+ALTO = configuracion.pantalla.get("alto")  # Alto por defecto  
+
 # Ejemplo de acceso rápido:
 # deepseek = servicios["deepseek"]
 # print(deepseek.api_key)
