@@ -53,23 +53,31 @@ def estrellas_animadas(
     """
     Dibuja y anima estrellas infantiles en el fondo.
     El número de estrellas y el refresco se adaptan automáticamente.
+    Se adapta en tiempo real al redimensionar la ventana.
     """
-    ancho, alto = pantalla.get_size()
-    area = ancho * alto
-    num_estrellas = min(max(area // 30000, 6), max_estrellas)
     clock = pygame.time.Clock()
     corriendo = True
     tiempo_cambio = 0
     intervalo_ms = 1000  # Cambia cada segundo
 
+    ancho, alto = pantalla.get_size()
+
     while corriendo:
+        redimensionar = False
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 corriendo = False
+            elif evento.type == pygame.VIDEORESIZE:
+                ancho, alto = evento.w, evento.h
+                pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
+                redimensionar = True
 
-        # Solo cambia las estrellas si ha pasado el intervalo
+        # Solo cambia las estrellas si ha pasado el intervalo o si se redimensionó
         tiempo_cambio += clock.get_time()
-        if tiempo_cambio >= intervalo_ms:
+        if tiempo_cambio >= intervalo_ms or redimensionar:
+            ancho, alto = pantalla.get_size()
+            area = ancho * alto
+            num_estrellas = min(max(area // 30000, 6), max_estrellas)
             dibujar_gradiente(pantalla, color_fondo1, color_fondo2, vertical=True)
             ocupados = []
             for _ in range(num_estrellas):
