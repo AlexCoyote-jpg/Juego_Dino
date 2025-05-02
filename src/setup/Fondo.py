@@ -51,13 +51,24 @@ def estrellas_animadas(
     ancho,
     alto
 ):
-    """Dibuja y actualiza las estrellas en el fondo."""
-    frame = fondo.copy()
+    """Dibuja y actualiza las estrellas en el fondo sin copiar el fondo en cada frame."""
+    # Dibuja el fondo original primero
+    pantalla.blit(fondo, (0, 0))
+    
+    # Actualiza y dibuja cada estrella directamente en la pantalla
     for estrella in estrellas:
         estrella.update(ancho, alto)
-        estrella.draw(frame)
-    pantalla.blit(frame, (0, 0))
-    pygame.display.flip()
+        # Guarda el área donde se dibujará la estrella
+        area_rect = pygame.Rect(
+            int(estrella.x - estrella.radio - 1),
+            int(estrella.y - estrella.radio - 1), 
+            estrella.radio * 2 + 2, 
+            estrella.radio * 2 + 2
+        )
+        # Restaura el fondo en esa área
+        pantalla.blit(fondo, area_rect, area_rect)
+        # Dibuja la estrella
+        estrella.draw(pantalla)
 
 def crear_fondo(ancho, alto, color_fondo1=(255, 250, 240), color_fondo2=(255, 235, 205)):
     surf = pygame.Surface((ancho, alto))
