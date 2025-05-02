@@ -5,15 +5,17 @@ import random
 import math
 from pygame.locals import MOUSEBUTTONDOWN
 from setup.navegacion import JuegoBase, BarraNavegacion
+from setup.Carga_Recursos import Recursos  # Importa la clase de recursos
 
 class MenuPrincipal:
-    def __init__(self, pantalla, estrellas, fondo, estrellas_animadas, crear_fondo, crear_estrellas):
+    def __init__(self, pantalla, estrellas, fondo, estrellas_animadas, crear_fondo, crear_estrellas, Recursos=Recursos):
+        self.Recursos = Recursos
         self.juegos = [
-            {"nombre": "Dino Suma/Resta", "imagen": "assets/imagenes/dino1.png"},
-            {"nombre": "DinoCazador", "imagen": "assets/imagenes/dino2.png"},
-            {"nombre": "DinoLógico", "imagen": "assets/imagenes/dino3.png"},
-            {"nombre": "Memoria Jurásica", "imagen": "assets/imagenes/dino4.png"},
-            {"nombre": "Rescate Jurásico", "imagen": "assets/imagenes/dino5.png"}
+            {"nombre": "Dino Suma/Resta", "imagen": "dino1"},
+            {"nombre": "DinoCazador", "imagen": "dino2"},
+            {"nombre": "DinoLógico", "imagen": "dino3"},
+            {"nombre": "Memoria Jurásica", "imagen": "dino4"},
+            {"nombre": "Rescate Jurásico", "imagen": "dino5"}
         ]
         self.pantalla = pantalla
         self.estrellas = estrellas
@@ -28,7 +30,15 @@ class MenuPrincipal:
         self.base_width = 900
         self.base_height = 700
         self.scale = self.pantalla.get_width() / self.base_width
-        self.imagenes_dinos = [pygame.image.load(j["imagen"]) for j in self.juegos]
+        # Usa imágenes ya cargadas en memoria, ignora las que no existen
+        self.imagenes_dinos = []
+        for j in self.juegos:
+            img = self.Recursos.get_imagen(j["imagen"])
+            if img is not None:
+                self.imagenes_dinos.append(img)
+            else:
+                # Imagen no encontrada, usa un Surface vacío para evitar errores
+                self.imagenes_dinos.append(pygame.Surface((64, 64), pygame.SRCALPHA))
         self.dinos_actuales = [0, 1, 2]
         self.ultimo_cambio_dinos = time.time()
         self.dificultad_seleccionada = "Fácil"

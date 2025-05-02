@@ -1,81 +1,88 @@
+import os
 import pygame
-from setup.Carga_Configs import configuracion
 
-BLANCO = (255, 255, 255)
-_imagenes_originales = {}
-def cargar_imagen(ruta, tamaño, color_sustituto, texto_sustituto=""):
-    try:
-        img = pygame.image.load(ruta)
-        return pygame.transform.scale(img, tamaño)
-    except pygame.error:
-        sustituto = pygame.Surface(tamaño)
-        sustituto.fill(color_sustituto)
-        if texto_sustituto:
-            font = pygame.font.SysFont('Arial', 24)
-            text = font.render(texto_sustituto, True, BLANCO)
-            text_rect = text.get_rect(center=(tamaño[0]//2, tamaño[1]//2))
-            sustituto.blit(text, text_rect)
-        return sustituto
+pygame.init()
 
-def cargar_imagen_original(nombre, ruta):
-    try:
-        return pygame.image.load(ruta).convert_alpha()
-    except pygame.error:
-        # Imagen de sustituto si falla la carga
-        superficie = pygame.Surface((100, 100))
-        superficie.fill((200, 200, 200))
-        font = pygame.font.SysFont('Arial', 24)
-        text = font.render(nombre, True, BLANCO)
-        text_rect = text.get_rect(center=(50, 50))
-        superficie.blit(text, text_rect)
-        return superficie
+IMAGES = {}
+SOUNDS = {}
 
-def cargar_todas_las_imagenes():
-    rutas = configuracion.imagenes
-    for nombre, ruta in rutas.items():
-        _imagenes_originales[nombre] = cargar_imagen_original(nombre, ruta)
+class Recursos:
+    @staticmethod
+    def cargar_imagenes():
+        """
+        Carga todas las imágenes desde assets/imagenes y subcarpetas.
+        Debe llamarse después de pygame.display.set_mode().
+        """
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        images_dir = os.path.join(base_dir, "assets", "imagenes")
+        if not os.path.exists(images_dir):
+            print(f"Warning: Image directory {images_dir} not found!")
+            return
+        for root, _, files in os.walk(images_dir):
+            for file in files:
+                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                    file_path = os.path.join(root, file)
+                    name = os.path.splitext(file)[0]
+                    relative_dir = os.path.relpath(root, images_dir)
+                    if relative_dir != '.':
+                        prefix = relative_dir.replace(os.path.sep, '_')
+                        name = f"{prefix}_{name}"
+                    try:
+                        # Solo usa convert_alpha() después de display.set_mode()
+                        img = pygame.image.load(file_path).convert_alpha()
+                        IMAGES[name] = img
+                        globals()[name.upper()] = img
+                    except Exception as e:
+                        print(f"Error loading image {file}: {e}")
 
-def obtener_imagen(nombre, tamaño=None):
-    """
-    Devuelve la imagen original o escalada al tamaño solicitado.
-    """
-    img = _imagenes_originales.get(nombre)
-    if img and tamaño:
-        return pygame.transform.scale(img, tamaño)
-    return img
+    @staticmethod
+    def cargar_sonidos():
+        """
+        Carga todos los sonidos desde assets/sonidos y subcarpetas.
+        """
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sounds_dir = os.path.join(base_dir, "assets", "sonidos")
+        if not os.path.exists(sounds_dir):
+            print(f"Warning: Sound directory {sounds_dir} not found!")
+            return
+        for root, _, files in os.walk(sounds_dir):
+            for file in files:
+                if file.lower().endswith(('.wav', '.ogg', '.mp3')):
+                    file_path = os.path.join(root, file)
+                    name = os.path.splitext(file)[0]
+                    relative_dir = os.path.relpath(root, sounds_dir)
+                    if relative_dir != '.':
+                        prefix = relative_dir.replace(os.path.sep, '_')
+                        name = f"{prefix}_{name}"
+                    try:
+                        snd = pygame.mixer.Sound(file_path)
+                        SOUNDS[name] = snd
+                        globals()[name.upper()] = snd
+                    except Exception as e:
+                        print(f"Error loading sound {file}: {e}")
 
-def cargar_todos_los_sonidos():
-    sonidos = {}
-    rutas = configuracion.sonidos
-    for nombre, ruta in rutas.items():
-        try:
-            sonidos[nombre] = pygame.mixer.Sound(ruta)
-        except pygame.error:
-            print(f"No se pudo cargar el sonido '{nombre}' ({ruta})")
-            sonidos[nombre] = None
-    return sonidos
+    @staticmethod
+    def get_imagen(nombre):
+        if nombre in IMAGES:
+            return IMAGES[nombre]
+        print(f"Warning: Image '{nombre}' not found!")
+        return None
 
-# Carga global de imágenes y sonidos al importar el módulo
-cargar_todas_las_imagenes()
-sonidos_cargados = cargar_todos_los_sonidos()
+    @staticmethod
+    def get_sonido(nombre):
+        if nombre in SOUNDS:
+            return SOUNDS[nombre]
+        print(f"Warning: Sound '{nombre}' not found!")
+        return None
 
-if __name__ == "__main__":
-    pygame.init()
-    pantalla = pygame.display.set_mode((300, 300))
-    pygame.display.set_caption("Prueba de carga de imágenes y sonidos")
-    dino1 = obtener_imagen("dino1", (150, 150))
-    if dino1 is None:
-        print("No se pudo cargar la imagen 'dino1'")
-    else:
-        pantalla.blit(dino1, (75, 75))
-        pygame.display.flip()
-        print("Imagen 'dino1' cargada y mostrada correctamente.")
-        sonido_fondo = sonidos_cargados.get("acierto")
-        if sonido_fondo:
-            sonido_fondo.play()
-        esperando = True
-        while esperando:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    esperando = False
-    pygame.quit()
+def get_image(name):
+    return Recursos.get_imagen(name)
+
+# --- Ejemplo de uso desde cualquier otro módulo ---
+# from setup.Carga_Recursos import Recursos, get_image
+# Recursos.cargar_imagenes()  # Debe llamarse después de display.set_mode()
+# imagen = Recursos.get_imagen("dino1")  # o get_image("dino1")
+# sonido = Recursos.get_sonido("salto")
+# Si cargaste imágenes con subcarpetas: Recursos.get_imagen("subcarpeta_nombre")
+# También puedes acceder a la variable global: DINO1 (si existe)
+# -----------------------------------------------
