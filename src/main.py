@@ -1,26 +1,15 @@
 # main.py
 import pygame
-from setup.Fondo import dibujar_fondo
+from setup.Fondo import estrellas_animadas
 
 def main():
     pygame.init()
-    # Define el tamaño de la ventana que quieras
+    # Define el tamaño de la ventana que quieras (o usa (0, 0) para tamaño máximo disponible)
     width, height = 800, 600
-    screen = pygame.display.set_mode((width, height))
-    clock = pygame.time.Clock()
-
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-        # Llama a tu función de fondo en cada frame
-        dibujar_fondo(screen, num_elementos=15)
-
-        pygame.display.flip()
-        clock.tick(30)  # limita a 30 FPS
-
+    pantalla = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("DIno Game")
+    # Llama al fondo animado
+    estrellas_animadas(pantalla)
     pygame.quit()
 
 if __name__ == "__main__":

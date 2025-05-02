@@ -1,9 +1,0 @@
-{
-    "python.analysis.extraPaths": [
-        "./src/chatbot",
-        "./src/Juegos",
-        "./src/Settings",
-        "./src/setup",
-        "./src/Test"
-    ]
-}
