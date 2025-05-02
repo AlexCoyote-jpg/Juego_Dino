@@ -1,5 +1,6 @@
 import pygame
 import math
+import time
 
 # Colores globales
 BLANCO = (255, 255, 255)
@@ -18,6 +19,10 @@ class JuegoBase:
         self.animacion_nivel = 0
         self.nivel_actual = "Home"
         self.fuente_botones = pygame.font.SysFont("Segoe UI", 32)
+        self.transicion_alpha = 0
+        self.transicion_en_progreso = False
+        self.transicion_color = (255, 255, 255)
+        self.transicion_velocidad = 18  # mayor = más rápido
 
     def actualizar_botones_presionados(self):
         """Reduce el contador de botones presionados y elimina los expirados."""
@@ -28,13 +33,24 @@ class JuegoBase:
             self.botones_presionados[k] -= 1
 
     def manejar_transicion(self):
-        """Transición visual entre niveles."""
-        if self.animacion_nivel > 0:
-            alpha = min(255, int(255 * (self.animacion_nivel / 30)))
+        """
+        Fundido visual suave configurable, cómodo y ligero.
+        Llama a self.iniciar_transicion() para comenzar.
+        """
+        if self.transicion_en_progreso:
             overlay = pygame.Surface((self.ANCHO, self.ALTO), pygame.SRCALPHA)
-            overlay.fill((*BLANCO, alpha))
+            overlay.fill((*self.transicion_color, int(self.transicion_alpha)))
             self.pantalla.blit(overlay, (0, 0))
-            self.animacion_nivel -= 1
+            self.transicion_alpha += self.transicion_velocidad
+            if self.transicion_alpha >= 255:
+                self.transicion_en_progreso = False
+                self.transicion_alpha = 0
+
+    def iniciar_transicion(self, color=(255,255,255), velocidad=18):
+        self.transicion_en_progreso = True
+        self.transicion_alpha = 0
+        self.transicion_color = color
+        self.transicion_velocidad = velocidad
 
     def dibujar_boton(self, texto, x, y, ancho, alto, color_normal, color_hover):
         """Dibuja un botón y acomoda el texto adaptativamente en su interior, retorna su rect."""
@@ -90,19 +106,16 @@ class JuegoBase:
         Soporta saltos de párrafo (\n\n) y saltos de línea (\n).
         Devuelve una lista de rects de las líneas dibujadas.
         """
-        if fuente_base is None:
-            fuente_base = pygame.font.SysFont("Segoe UI", 28)
+        fuente_base = fuente_base or pygame.font.SysFont("Segoe UI", 28)
+        font_name = "Segoe UI"
         max_font_size = fuente_base.get_height()
         min_font_size = 12
-        font_size = max_font_size
-        font_name = "Segoe UI"
-        # Separa por párrafos dobles
         parrafos = texto.split('\n\n')
+        font_size = max_font_size
         while font_size >= min_font_size:
             fuente = pygame.font.SysFont(font_name, font_size, bold=fuente_base.get_bold())
             lines = []
             for parrafo in parrafos:
-                # Cada párrafo puede tener saltos de línea simples
                 for raw_line in parrafo.split('\n'):
                     words = raw_line.split()
                     line = ""
@@ -115,19 +128,15 @@ class JuegoBase:
                             line = word
                     if line:
                         lines.append(line)
-                # Añade línea vacía entre párrafos (menos al final)
                 if parrafo != parrafos[-1]:
                     lines.append("")
             total_height = len(lines) * fuente.get_height()
             if total_height <= h:
                 break
             font_size -= 1
+        # Centrado vertical
+        start_y = y + (h - total_height) // 2 if centrado else y
         rects = []
-        # Centrado vertical del bloque de texto
-        if centrado:
-            start_y = y + (h - total_height) // 2
-        else:
-            start_y = y
         for i, line in enumerate(lines):
             render = fuente.render(line, True, color)
             rect = render.get_rect()
@@ -151,31 +160,43 @@ class BarraNavegacion:
         self.juego = juego
         self.niveles = niveles or ["Home", "Básico", "Medio", "Avanzado", "ChatBot"]
         self.botones = {}
+        self.animacion_t0 = time.time()
 
     def dibujar(self, x_inicial=200, y=30, ancho=100, alto=40, espacio=10):
-        """Dibuja la barra de navegación con los botones de nivel"""
+        """Dibuja la barra de navegación con animación sutil en el texto activo."""
         x = x_inicial
+        mouse_pos = pygame.mouse.get_pos()
+        nivel_actual = self.juego.nivel_actual
+        fuente = self.juego.fuente_botones
+        t = pygame.time.get_ticks() / 1000.0  # segundos
 
         for i, nivel in enumerate(self.niveles):
             boton_ancho = ancho + 20 if nivel == "ChatBot" else ancho
+            rect = pygame.Rect(x, y, boton_ancho, alto)
+            self.botones[nivel] = rect
 
-            self.botones[nivel] = self.juego.dibujar_boton(
-                nivel, x, y, boton_ancho, alto,
-                BOTON_NORMAL, BOTON_HOVER
-            )
+            # Determina color según estado
+            if nivel == nivel_actual:
+                color = BOTON_ACTIVO
+            elif rect.collidepoint(mouse_pos):
+                color = BOTON_HOVER
+            else:
+                color = BOTON_NORMAL
 
-            # Resaltar el botón del nivel actual
-            if nivel == self.juego.nivel_actual:
-                pygame.draw.rect(self.juego.pantalla, BOTON_ACTIVO, self.botones[nivel], 0, border_radius=10)
-                texto_render = self.juego.fuente_botones.render(nivel, True, TEXTO_CLARO)
-                texto_rect = texto_render.get_rect(center=self.botones[nivel].center)
-                self.juego.pantalla.blit(texto_render, texto_rect)
+            pygame.draw.rect(self.juego.pantalla, color, rect, border_radius=10)
+            texto_render = fuente.render(nivel, True, TEXTO_CLARO)
+            texto_rect = texto_render.get_rect(center=rect.center)
 
-            # Aplicar efecto de presionado
+            # Animación sutil para el texto activo (bouncing vertical)
+            if nivel == nivel_actual:
+                offset = int(4 * math.sin(t * 4))  # rápido pero sutil
+                texto_rect.y += offset
+
+            self.juego.pantalla.blit(texto_render, texto_rect)
+
+            # Efecto de presionado (opcional, si se usa)
             if i in self.juego.botones_presionados and self.juego.botones_presionados[i] > 0:
-                pygame.draw.rect(self.juego.pantalla, BOTON_ACTIVO, self.botones[nivel], 0, border_radius=10)
-                texto_render = self.juego.fuente_botones.render(nivel, True, TEXTO_CLARO)
-                texto_rect = texto_render.get_rect(center=self.botones[nivel].center)
+                pygame.draw.rect(self.juego.pantalla, BOTON_ACTIVO, rect, 0, border_radius=10)
                 self.juego.pantalla.blit(texto_render, texto_rect)
 
             x += (boton_ancho + espacio)

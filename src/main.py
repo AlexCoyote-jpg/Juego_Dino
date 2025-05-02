@@ -2,19 +2,19 @@
 import pygame
 import setup.Carga_Configs
 from setup.Fondo import estrellas_animadas, crear_fondo, crear_estrellas
-from menu import MenuPrincipal  # Asegúrate de importar tu menú
+from menu import MenuPrincipal
 
 def main():
     pygame.init()
-
+    # Usa configuración óptima para pantalla y evita recalcular tamaños
     ancho, alto = setup.Carga_Configs.ANCHO, setup.Carga_Configs.ALTO
     pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
     pygame.display.set_caption("Jugando con Dino")
 
+    # Crea fondo y estrellas una sola vez, se actualizan en el menú
     fondo = crear_fondo(ancho, alto)
     estrellas = crear_estrellas(ancho, alto)
 
-    # Pasa las variables y funciones necesarias al menú
     menu = MenuPrincipal(
         pantalla,
         estrellas,
@@ -23,9 +23,10 @@ def main():
         crear_fondo,
         crear_estrellas
     )
-    menu.ejecutar()
-
-    pygame.quit()
+    try:
+        menu.ejecutar()
+    finally:
+        pygame.quit()
 
 if __name__ == "__main__":
     main()

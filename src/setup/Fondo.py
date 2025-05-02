@@ -101,7 +101,8 @@ class Estrella:
         self.puntos = random.choice([5, 6, 7])
         # Movimiento
         angle = random.uniform(0, 2 * math.pi)
-        speed = random.uniform(10, 40) / 60.0  # píxeles por frame
+        # Aumenta la velocidad multiplicando el rango superior (por ejemplo, de 40 a 80)
+        speed = random.uniform(20, 80) / 60.0  # píxeles por frame (antes 10,40)
         self.dx = math.cos(angle) * speed
         self.dy = math.sin(angle) * speed
         # Parpadeo
