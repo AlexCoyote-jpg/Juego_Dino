@@ -1,10 +1,13 @@
 import pygame
+import math
 
+# Colores globales
 BLANCO = (255, 255, 255)
 BOTON_NORMAL = (70, 130, 180)
 BOTON_HOVER = (100, 149, 237)
 BOTON_ACTIVO = (30, 144, 255)
 TEXTO_CLARO = (255, 255, 255)
+TEXTO_OSCURO = (30, 30, 30)
 
 class JuegoBase:
     def __init__(self, pantalla, ancho, alto):
@@ -14,39 +17,134 @@ class JuegoBase:
         self.botones_presionados = {}
         self.animacion_nivel = 0
         self.nivel_actual = "Home"
-        self.fuente_botones = pygame.font.SysFont(None, 32)
+        self.fuente_botones = pygame.font.SysFont("Segoe UI", 32)
 
     def actualizar_botones_presionados(self):
-        """Actualiza el estado de los botones presionados"""
-        for boton_id in list(self.botones_presionados.keys()):
-            self.botones_presionados[boton_id] -= 1
-            if self.botones_presionados[boton_id] <= 0:
-                del self.botones_presionados[boton_id]
+        """Reduce el contador de botones presionados y elimina los expirados."""
+        expirados = [k for k, v in self.botones_presionados.items() if v <= 1]
+        for k in expirados:
+            del self.botones_presionados[k]
+        for k in self.botones_presionados:
+            self.botones_presionados[k] -= 1
 
     def manejar_transicion(self):
-        """Maneja la transición entre niveles"""
+        """Transición visual entre niveles."""
         if self.animacion_nivel > 0:
             alpha = min(255, int(255 * (self.animacion_nivel / 30)))
-            overlay = pygame.Surface((self.ANCHO, self.ALTO))
-            overlay.set_alpha(alpha)
-            overlay.fill(BLANCO)
+            overlay = pygame.Surface((self.ANCHO, self.ALTO), pygame.SRCALPHA)
+            overlay.fill((*BLANCO, alpha))
             self.pantalla.blit(overlay, (0, 0))
             self.animacion_nivel -= 1
 
     def dibujar_boton(self, texto, x, y, ancho, alto, color_normal, color_hover):
+        """Dibuja un botón y acomoda el texto adaptativamente en su interior, retorna su rect."""
         mouse_pos = pygame.mouse.get_pos()
         rect = pygame.Rect(x, y, ancho, alto)
         color = color_hover if rect.collidepoint(mouse_pos) else color_normal
         pygame.draw.rect(self.pantalla, color, rect, border_radius=10)
-        fuente = self.fuente_botones
-        texto_render = fuente.render(texto, True, TEXTO_CLARO)
-        texto_rect = texto_render.get_rect(center=rect.center)
-        self.pantalla.blit(texto_render, texto_rect)
+        # Usar mostrar_texto_adaptativo para centrar y ajustar el texto dentro del botón
+        JuegoBase.mostrar_texto_adaptativo(
+            self.pantalla,
+            texto,
+            x, y,
+            ancho, alto,
+            self.fuente_botones,
+            TEXTO_CLARO,
+            centrado=True
+        )
         return rect
 
-    def ejecutar(self):
-        """Método principal para ejecutar el juego, debe ser implementado por cada juego"""
-        pass
+    @staticmethod
+    def animar_dinos(pantalla, imagenes_dinos, posiciones, escala, tiempo_ms):
+        """Anima dinosaurios en posiciones dadas."""
+        for i, (img, pos) in enumerate(zip(imagenes_dinos, posiciones)):
+            offset_y = int(10 * escala * abs(math.sin((tiempo_ms + i*1000) / 500)))
+            escala_dino = escala * (1.0 + 0.1 * abs(math.sin((tiempo_ms + i*1000) / 800)))
+            tamaño = int(100 * escala_dino)
+            img_scaled = pygame.transform.smoothscale(img, (tamaño, tamaño))
+            pos_x = pos[0] - (tamaño - int(100 * escala)) // 2
+            pos_y = pos[1] - offset_y - (tamaño - int(100 * escala)) // 2
+            pantalla.blit(img_scaled, (pos_x, pos_y))
+
+    @staticmethod
+    def mostrar_logros_y_puntuaciones(pantalla, fuente, logros, puntuaciones, ancho):
+        """Muestra logros y puntuaciones en la pantalla."""
+        y = 20
+        JuegoBase.mostrar_texto_static(pantalla, "Logros:", ancho - 200, y, fuente)
+        for logro in sorted(logros):
+            y += 30
+            JuegoBase.mostrar_texto_static(pantalla, f"- {logro}", ancho - 200, y, fuente)
+        y += 40
+        JuegoBase.mostrar_texto_static(pantalla, "Puntuaciones:", ancho - 200, y, fuente)
+        for juego, puntos in puntuaciones.items():
+            y += 30
+            JuegoBase.mostrar_texto_static(pantalla, f"{juego}: {puntos}", ancho - 200, y, fuente)
+
+    @staticmethod
+    def mostrar_texto_adaptativo(
+        pantalla, texto, x, y, w, h, fuente_base=None, color=(30,30,30), centrado=False
+    ):
+        """
+        Dibuja texto adaptativo (autoajusta tamaño y salto de línea) en un área dada.
+        El texto queda perfectamente centrado vertical y horizontalmente si centrado=True.
+        Soporta saltos de párrafo (\n\n) y saltos de línea (\n).
+        Devuelve una lista de rects de las líneas dibujadas.
+        """
+        if fuente_base is None:
+            fuente_base = pygame.font.SysFont("Segoe UI", 28)
+        max_font_size = fuente_base.get_height()
+        min_font_size = 12
+        font_size = max_font_size
+        font_name = "Segoe UI"
+        # Separa por párrafos dobles
+        parrafos = texto.split('\n\n')
+        while font_size >= min_font_size:
+            fuente = pygame.font.SysFont(font_name, font_size, bold=fuente_base.get_bold())
+            lines = []
+            for parrafo in parrafos:
+                # Cada párrafo puede tener saltos de línea simples
+                for raw_line in parrafo.split('\n'):
+                    words = raw_line.split()
+                    line = ""
+                    for word in words:
+                        test_line = f"{line} {word}".strip()
+                        if fuente.size(test_line)[0] <= w:
+                            line = test_line
+                        else:
+                            lines.append(line)
+                            line = word
+                    if line:
+                        lines.append(line)
+                # Añade línea vacía entre párrafos (menos al final)
+                if parrafo != parrafos[-1]:
+                    lines.append("")
+            total_height = len(lines) * fuente.get_height()
+            if total_height <= h:
+                break
+            font_size -= 1
+        rects = []
+        # Centrado vertical del bloque de texto
+        if centrado:
+            start_y = y + (h - total_height) // 2
+        else:
+            start_y = y
+        for i, line in enumerate(lines):
+            render = fuente.render(line, True, color)
+            rect = render.get_rect()
+            if centrado:
+                rect.centerx = x + w // 2
+            else:
+                rect.x = x
+            rect.y = start_y + i * fuente.get_height()
+            pantalla.blit(render, rect)
+            rects.append(rect)
+        return rects
+
+    @staticmethod
+    def dibujar_caja_texto(self, x, y, w, h, color, radius=18):
+        s = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(s, color, (0, 0, w, h), border_radius=radius)
+        self.pantalla.blit(s, (x, y))
 
 class BarraNavegacion:
     def __init__(self, juego, niveles=None):

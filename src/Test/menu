@@ -1,0 +1,174 @@
+import pygame
+import pygame_gui
+
+class MenuPrincipal:
+    def __init__(self, pantalla, estrellas, fondo, estrellas_animadas, crear_fondo, crear_estrellas):
+        self.pantalla = pantalla
+        self.estrellas = estrellas
+        self.fondo = fondo
+        self.estrellas_animadas = estrellas_animadas
+        self.crear_fondo = crear_fondo
+        self.crear_estrellas = crear_estrellas
+        self.ancho = pantalla.get_width()
+        self.alto = pantalla.get_height()
+        self.manager = pygame_gui.UIManager((self.ancho, self.alto), 'theme.json')
+        self.bg_color = (245, 245, 245)
+        self.dino_imgs = [
+            pygame.image.load("assets/imagenes/dino1.png"),
+            pygame.image.load("assets/imagenes/dino2.png"),
+            pygame.image.load("assets/imagenes/dino3.png"),
+            pygame.image.load("assets/imagenes/dino4.png"),
+            pygame.image.load("assets/imagenes/dino5.png"),
+        ]
+        self.juegos = [
+            "Dino Suma/Resta", "DinoCazador", "DinoLógico", "Memoria Jurásica", "Rescate Jurásico"
+        ]
+        self.niveles = ["Home", "Fácil", "Normal", "Difícil", "ChatBot"]
+        self.nivel_actual = "Home"
+        self.widgets = []
+        self.crear_barra_navegacion()
+        self.mostrar_home()
+
+    def limpiar_widgets(self):
+        for w in self.widgets:
+            w.kill()
+        self.widgets = []
+
+    def crear_barra_navegacion(self):
+        self.limpiar_widgets()
+        x = 80
+        for nivel in self.niveles:
+            btn = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect((x, 30), (120, 50)),
+                text=nivel,
+                manager=self.manager,
+                object_id=f"#nav_{nivel}"
+            )
+            btn.set_hold_range((0, 0))
+            self.widgets.append(btn)
+            x += 150
+
+    def mostrar_home(self):
+        self.limpiar_widgets()
+        self.crear_barra_navegacion()
+        pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((self.ancho//2-320, 110, 640, 60)),
+            text="¡Bienvenido a Jugando con Dino!",
+            manager=self.manager,
+            object_id="#titulo"
+        )
+        pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect((self.ancho//2-300, 180, 600, 320)),
+            starting_height=1,
+            manager=self.manager,
+            object_id="#panel_home"
+        )
+        instrucciones = [
+            "¡Aprende matemáticas jugando con Dino y sus amigos!",
+            "",
+            "Selecciona una opción en la barra superior:",
+            "",
+            "- Fácil: Juegos para principiantes",
+            "- Normal: Juegos para quienes ya conocen los conceptos básicos",
+            "- Difícil: Juegos para expertos en matemáticas",
+            "- ChatBot: Habla directamente con Dino y pregúntale sobre matemáticas",
+            "",
+            "¡Diviértete y aprende mientras juegas!"
+        ]
+        for i, linea in enumerate(instrucciones):
+            pygame_gui.elements.UILabel(
+                relative_rect=pygame.Rect((self.ancho//2-290, 200 + i*28, 580, 28)),
+                text=linea,
+                manager=self.manager,
+                object_id="#instruccion"
+            )
+        # Animación de dinosaurios (solo muestra imágenes, animación manual si quieres)
+        for i in range(3):
+            img = pygame.transform.smoothscale(self.dino_imgs[i], (120, 120))
+            self.pantalla.blit(img, (200 + i*200, 520))
+
+    def mostrar_juegos(self, dificultad):
+        self.limpiar_widgets()
+        self.crear_barra_navegacion()
+        pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((self.ancho//2-320, 110, 640, 60)),
+            text=f"Juegos de nivel {dificultad}",
+            manager=self.manager,
+            object_id="#titulo"
+        )
+        juegos_por_fila = 3
+        espacio_h, espacio_v = 40, 40
+        ancho_juego, alto_juego = 170, 170
+        ancho_total = juegos_por_fila * ancho_juego + (juegos_por_fila - 1) * espacio_h
+        inicio_x = (self.ancho - ancho_total) // 2
+        for i, nombre in enumerate(self.juegos):
+            x = inicio_x + (ancho_juego + espacio_h) * (i % juegos_por_fila)
+            y = 200 + (alto_juego + espacio_v) * (i // juegos_por_fila)
+            panel = pygame_gui.elements.UIPanel(
+                relative_rect=pygame.Rect((x, y, ancho_juego, alto_juego)),
+                starting_height=1,  # ✅ Correcto
+                manager=self.manager,
+                object_id="#panel_juego"
+            )
+            pygame_gui.elements.UILabel(
+                relative_rect=pygame.Rect((10, 10, ancho_juego-20, 30)),
+                text=nombre,
+                manager=self.manager,
+                container=panel
+            )
+            # Puedes agregar aquí un botón para lanzar el juego real
+
+    def mostrar_chatbot(self):
+        self.limpiar_widgets()
+        self.crear_barra_navegacion()
+        pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((self.ancho//2-200, 200, 400, 60)),
+            text="¡Habla con Dino! (ChatBot)",
+            manager=self.manager,
+            object_id="#titulo"
+        )
+        # Aquí puedes agregar más widgets para tu chatbot, como una caja de texto y un área de mensajes.
+
+    def handle_event(self, event):
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            for nivel in self.niveles:
+                if event.ui_object_id == f"#nav_{nivel}":
+                    self.nivel_actual = nivel
+                    if nivel == "Home":
+                        self.mostrar_home()
+                    elif nivel in ["Fácil", "Normal", "Difícil"]:
+                        self.mostrar_juegos(nivel)
+                    elif nivel == "ChatBot":
+                        self.mostrar_chatbot()
+
+    def ejecutar(self):
+        clock = pygame.time.Clock()
+        running = True
+        while running:
+            time_delta = clock.tick(60) / 1000.0
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.VIDEORESIZE:
+                    ancho, alto = event.w, event.h
+                    self.pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
+                    self.ancho = ancho
+                    self.alto = alto
+                    self.manager.set_window_resolution((ancho, alto))
+                    self.fondo = self.crear_fondo(ancho, alto)
+                    self.estrellas = self.crear_estrellas(ancho, alto)
+                self.manager.process_events(event)
+                if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                    self.handle_event(event)
+
+            self.manager.update(time_delta)
+            self.pantalla.fill(self.bg_color)
+            # Dibuja estrellas y fondo animado si lo deseas
+            self.estrellas_animadas(self.pantalla, self.estrellas, self.fondo, self.pantalla.get_width(), self.pantalla.get_height())
+            # Dibuja dinosaurios en home (fuera de pygame_gui)
+            if self.nivel_actual == "Home":
+                for i in range(3):
+                    img = pygame.transform.smoothscale(self.dino_imgs[i], (120, 120))
+                    self.pantalla.blit(img, (200 + i*200, 520))
+            self.manager.draw_ui(self.pantalla)
+            pygame.display.update()
