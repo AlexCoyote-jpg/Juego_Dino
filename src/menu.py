@@ -8,8 +8,9 @@ from setup.navegacion import JuegoBase, BarraNavegacion
 from setup.Carga_Recursos import Recursos  # Importa la clase de recursos
 
 class MenuPrincipal:
-    def __init__(self, pantalla, estrellas, fondo, estrellas_animadas, crear_fondo, crear_estrellas, Recursos=Recursos):
+    def __init__(self, pantalla, estrellas, fondo, estrellas_animadas, crear_fondo, crear_estrellas, Recursos=Recursos, fondo_thread=None):
         self.Recursos = Recursos
+        self.fondo_thread = fondo_thread  # Guarda el hilo del fondo si se pasa
         self.juegos = [
             {"nombre": "Dino Suma/Resta", "imagen": "dino1"},
             {"nombre": "DinoCazador", "imagen": "dino2"},
@@ -269,15 +270,16 @@ class MenuPrincipal:
     def ejecutar(self):
         clock = pygame.time.Clock()
         running = True
-        pantalla, estrellas, fondo = self.pantalla, self.estrellas, self.fondo
+        pantalla, fondo = self.pantalla, self.fondo
         sx, sy = self.sx, self.sy
         barra_nav = self.barra_nav
         juego_base = self.juego_base
         estrellas_animadas = self.estrellas_animadas
         crear_fondo = self.crear_fondo
         crear_estrellas = self.crear_estrellas
+        fondo_thread = self.fondo_thread
 
-        FPS = 120  # Alto para máxima fluidez
+        FPS = 120
 
         while running:
             for event in pygame.event.get():
@@ -287,13 +289,13 @@ class MenuPrincipal:
                     ancho, alto = event.w, event.h
                     pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
                     fondo = crear_fondo(ancho, alto)
-                    estrellas = crear_estrellas(ancho, alto)
+                    if fondo_thread:
+                        fondo_thread.update_size(ancho, alto)
                     juego_base.pantalla = pantalla
                     juego_base.ANCHO = ancho
                     juego_base.ALTO = alto
                     self.pantalla = pantalla
                     self.fondo = fondo
-                    self.estrellas = estrellas
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     for nivel, rect in barra_nav.botones.items():
                         if rect.collidepoint(event.pos):
@@ -301,7 +303,11 @@ class MenuPrincipal:
                             break
                     if juego_base.nivel_actual in ["Fácil", "Normal", "Difícil"]:
                         self.manejar_eventos_menu(event)
-            estrellas_animadas(pantalla, estrellas, fondo, pantalla.get_width(), pantalla.get_height())
+            # Usa el fondo animado threadsafe si está disponible
+            if fondo_thread:
+                estrellas_animadas(pantalla, fondo, fondo_thread)
+            else:
+                estrellas_animadas(pantalla, self.estrellas, fondo, pantalla.get_width(), pantalla.get_height())
             barra_nav.dibujar(x_inicial=sx(80), y=sy(30), ancho=sx(120), alto=sy(50), espacio=sx(30))
             if juego_base.nivel_actual == "Home":
                 self.mostrar_home()

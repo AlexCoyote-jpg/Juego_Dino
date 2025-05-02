@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import threading
 
 
 def dibujar_gradiente(surf, color1, color2, vertical=True):
@@ -124,6 +125,60 @@ class Estrella:
     def draw(self, surface):
         dibujar_estrella(surface, self.color, (int(self.x), int(self.y)), self.radio, points=self.puntos)
 
+class FondoAnimadoThread(threading.Thread):
+    """
+    Hilo para actualizar las estrellas del fondo de manera independiente.
+    Llama a start() para iniciar el hilo y a stop() para detenerlo.
+    """
+    def __init__(self, estrellas, ancho, alto, update_interval=0.008):
+        super().__init__()
+        self.estrellas = estrellas
+        self.ancho = ancho
+        self.alto = alto
+        self.update_interval = update_interval  # segundos entre updates (~120 FPS)
+        self._running = threading.Event()
+        self._running.set()
+        self._lock = threading.Lock()
+
+    def run(self):
+        while self._running.is_set():
+            with self._lock:
+                for estrella in self.estrellas:
+                    estrella.update(self.ancho, self.alto)
+            pygame.time.wait(int(self.update_interval * 1000))
+
+    def stop(self):
+        self._running.clear()
+
+    def update_size(self, ancho, alto):
+        with self._lock:
+            self.ancho = ancho
+            self.alto = alto
+
+    def get_estrellas(self):
+        with self._lock:
+            return list(self.estrellas)
+
+def estrellas_animadas_threadsafe(
+    pantalla,
+    fondo,
+    estrellas_thread: FondoAnimadoThread
+):
+    """
+    Dibuja el fondo y las estrellas animadas usando el hilo de fondo.
+    """
+    pantalla.blit(fondo, (0, 0))
+    estrellas = estrellas_thread.get_estrellas()
+    for estrella in estrellas:
+        area_rect = pygame.Rect(
+            int(estrella.x - estrella.radio - 1),
+            int(estrella.y - estrella.radio - 1),
+            estrella.radio * 2 + 2,
+            estrella.radio * 2 + 2
+        )
+        pantalla.blit(fondo, area_rect, area_rect)
+        estrella.draw(pantalla)
+
 # Ejemplo de uso:
 '''
 if __name__ == "__main__":
@@ -137,15 +192,21 @@ if __name__ == "__main__":
     print("Tamaño real de la ventana:", ancho, "x", alto)
     fondo = crear_fondo(ancho, alto)
     estrellas = crear_estrellas(ancho, alto)
-    while True:
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            elif evento.type == pygame.VIDEORESIZE:
-                ancho, alto = evento.w, evento.h
-                pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
-                fondo = crear_fondo(ancho, alto)
-                estrellas = crear_estrellas(ancho, alto)
-        estrellas_animadas(pantalla, estrellas, fondo, ancho, alto)
+    estrellas_thread = FondoAnimadoThread(estrellas, ancho, alto)
+    estrellas_thread.start()
+    try:
+        while True:
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    estrellas_thread.stop()
+                    pygame.quit()
+                    exit()
+                elif evento.type == pygame.VIDEORESIZE:
+                    ancho, alto = evento.w, evento.h
+                    pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
+                    fondo = crear_fondo(ancho, alto)
+                    estrellas_thread.update_size(ancho, alto)
+            estrellas_animadas_threadsafe(pantalla, fondo, estrellas_thread)
+    finally:
+        estrellas_thread.stop()
 '''

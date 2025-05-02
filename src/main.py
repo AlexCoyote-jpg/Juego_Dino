@@ -1,7 +1,7 @@
 # main.py
 import pygame
 import setup.Carga_Configs
-from setup.Fondo import estrellas_animadas, crear_fondo, crear_estrellas
+from setup.Fondo import estrellas_animadas, crear_fondo, crear_estrellas, FondoAnimadoThread, estrellas_animadas_threadsafe
 from setup.Carga_Recursos import Recursos
 from menu import MenuPrincipal
 
@@ -18,19 +18,25 @@ def main():
     # Crea fondo y estrellas una sola vez, se actualizan en el menú
     fondo = crear_fondo(ancho, alto)
     estrellas = crear_estrellas(ancho, alto)
+    # Inicia el hilo para el fondo animado
+    fondo_thread = FondoAnimadoThread(estrellas, ancho, alto)
+    fondo_thread.start()
 
     menu = MenuPrincipal(
         pantalla,
         estrellas,
         fondo,
-        estrellas_animadas,
+        estrellas_animadas_threadsafe,  # Usar la versión threadsafe
         crear_fondo,
         crear_estrellas,
-        Recursos
+        Recursos,
+        fondo_thread  # Pasa el hilo al menú
     )
     try:
         menu.ejecutar()
     finally:
+        fondo_thread.stop()
+        fondo_thread.join()
         pygame.quit()
 
 if __name__ == "__main__":
