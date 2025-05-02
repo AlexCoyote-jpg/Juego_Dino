@@ -7,7 +7,7 @@ def main():
     # Define el tamaño de la ventana que quieras (o usa (0, 0) para tamaño máximo disponible)
     width, height = 800, 600
     pantalla = pygame.display.set_mode((width, height))
-    pygame.display.set_caption("DIno Game")
+    pygame.display.set_caption("Jugando con Dino")
     # Llama al fondo animado
     estrellas_animadas(pantalla)
     pygame.quit()
