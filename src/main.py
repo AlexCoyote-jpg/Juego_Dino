@@ -1,23 +1,27 @@
-from setup.Carga_Configs import servicios, conexiones, configuracion, prompt_inicial
+# main.py
+import pygame
+from setup.Fondo import dibujar_fondo
 
 def main():
-    # Ejemplo de acceso a los servicios
-    deepseek = servicios["deepseek"]
-    print("API Key Deepseek:", deepseek.api_key)
-    print("Modelo Deepseek:", deepseek.model)
+    pygame.init()
+    # Define el tamaño de la ventana que quieras
+    width, height = 800, 600
+    screen = pygame.display.set_mode((width, height))
+    clock = pygame.time.Clock()
 
-    # Ejemplo de acceso a una conexión
-    conexion_nvidia = conexiones["nvidia"]
-    print("URL Nvidia:", conexion_nvidia["url"])
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-    # Ejemplo de acceso a la configuración general
-    print("Colores disponibles:", configuracion.colores)
-    print("Imagen logo:", configuracion.imagenes.get("logo"))
-    print("Sonido click:", configuracion.sonidos.get("click"))
-    print("Ancho de pantalla:", configuracion.pantalla.get("ancho"))
+        # Llama a tu función de fondo en cada frame
+        dibujar_fondo(screen, num_elementos=15)
 
-    # Prompt inicial
-    print("Prompt inicial:", prompt_inicial)
+        pygame.display.flip()
+        clock.tick(30)  # limita a 30 FPS
+
+    pygame.quit()
 
 if __name__ == "__main__":
     main()
