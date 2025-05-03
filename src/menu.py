@@ -4,13 +4,23 @@ import time
 import random
 import math
 from pygame.locals import MOUSEBUTTONDOWN
-from setup.navegacion import JuegoBase, BarraNavegacion
-from setup.Carga_Recursos import Recursos  # Importa la clase de recursos
+from setup.core import (
+    Recursos,
+    mostrar_texto_adaptativo,
+    dibujar_caja_texto,
+    dibujar_boton,
+    dibujar_carta_generica,
+    mostrar_victoria,
+    avanzar_nivel,
+    dibujar_fondo_animado,
+    JuegoBase,
+    BarraNavegacion
+)
 
 class MenuPrincipal:
     def __init__(self, pantalla, estrellas, fondo, estrellas_animadas, crear_fondo, crear_estrellas, Recursos=Recursos, fondo_thread=None):
         self.Recursos = Recursos
-        self.fondo_thread = fondo_thread  # Guarda el hilo del fondo si se pasa
+        self.fondo_thread = fondo_thread
         self.juegos = [
             {"nombre": "Dino Suma/Resta", "imagen": "dino1"},
             {"nombre": "DinoCazador", "imagen": "dino2"},
@@ -26,19 +36,17 @@ class MenuPrincipal:
         self.crear_estrellas = crear_estrellas
 
         self.juego_base = JuegoBase(self.pantalla, self.pantalla.get_width(), self.pantalla.get_height())
-        self.barra_nav = BarraNavegacion(self.juego_base, niveles=["Home", "Fácil", "Normal", "Difícil", "ChatBot"])
+        self.barra_nav = BarraNavegacion(self.juego_base, niveles=["Home", "Fácil", "Normal", "Difícil", "ChatBot"], logo_img=self.Recursos.get_imagen("dino_logo"))
 
         self.base_width = 900
         self.base_height = 700
         self.scale = self.pantalla.get_width() / self.base_width
-        # Usa imágenes ya cargadas en memoria, ignora las que no existen
         self.imagenes_dinos = []
         for j in self.juegos:
             img = self.Recursos.get_imagen(j["imagen"])
             if img is not None:
                 self.imagenes_dinos.append(img)
             else:
-                # Imagen no encontrada, usa un Surface vacío para evitar errores
                 self.imagenes_dinos.append(pygame.Surface((64, 64), pygame.SRCALPHA))
         self.dinos_actuales = [0, 1, 2]
         self.ultimo_cambio_dinos = time.time()
@@ -46,7 +54,6 @@ class MenuPrincipal:
         self.juego_seleccionado = None
         self.botones_juegos = []
 
-        # Pre-carga de fuentes y colores para evitar recalcular
         self.font_titulo = pygame.font.SysFont("Segoe UI", 54, bold=True)
         self.font_instrucciones = pygame.font.SysFont("Segoe UI", 28)
         self.color_azul = (70, 130, 180)
@@ -60,10 +67,9 @@ class MenuPrincipal:
         return int(y * self.pantalla.get_height() / self.base_height)
 
     def mostrar_home(self):
-        # Título centrado
         x_t, y_t, w_t, h_t = self.sx(130), self.sy(110), self.sx(640), self.sy(60)
-        JuegoBase.dibujar_caja_texto(self, x_t, y_t, w_t, h_t, self.color_azul)
-        JuegoBase.mostrar_texto_adaptativo(
+        dibujar_caja_texto(self.pantalla, x_t, y_t, w_t, h_t, self.color_azul)
+        mostrar_texto_adaptativo(
             self.pantalla,
             "¡Bienvenido a Jugando con Dino!",
             x_t, y_t, w_t, h_t,
@@ -71,9 +77,8 @@ class MenuPrincipal:
             (255,255,255),
             centrado=True
         )
-        # Caja de instrucciones centrada
         caja_x, caja_y, caja_w, caja_h = self.sx(150), self.sy(180), self.sx(600), self.sy(320)
-        JuegoBase.dibujar_caja_texto(self, caja_x, caja_y, caja_w, caja_h, self.color_blanco_trans)
+        dibujar_caja_texto(self.pantalla, caja_x, caja_y, caja_w, caja_h, self.color_blanco_trans)
         instrucciones = (
             "¡Aprende matemáticas jugando con Dino y sus amigos!\n\n"
             "Selecciona una opción en la barra superior:\n\n"
@@ -83,7 +88,7 @@ class MenuPrincipal:
             "- ChatBot: Habla directamente con Dino y pregúntale sobre matemáticas\n\n"
             "¡Diviértete y aprende mientras juegas!"
         )
-        JuegoBase.mostrar_texto_adaptativo(
+        mostrar_texto_adaptativo(
             self.pantalla,
             instrucciones,
             caja_x, caja_y, caja_w, caja_h,
@@ -91,7 +96,6 @@ class MenuPrincipal:
             (30,30,30),
             centrado=True
         )
-        # Animación de dinosaurios (solo cambia cada 3s, no recalcula imágenes)
         if time.time() - self.ultimo_cambio_dinos >= 3.0:
             self.dinos_actuales = random.sample(range(len(self.imagenes_dinos)), 3)
             self.ultimo_cambio_dinos = time.time()
@@ -107,8 +111,8 @@ class MenuPrincipal:
     def dibujar_pantalla_juegos(self):
         sx, sy = self.sx, self.sy
         x_t, y_t, w_t, h_t = sx(130), sy(110), sx(640), sy(60)
-        JuegoBase.dibujar_caja_texto(self, x_t, y_t, w_t, h_t, self.color_azul)
-        JuegoBase.mostrar_texto_adaptativo(
+        dibujar_caja_texto(self.pantalla, x_t, y_t, w_t, h_t, self.color_azul)
+        mostrar_texto_adaptativo(
             self.pantalla,
             f"Juegos de nivel {self.dificultad_seleccionada}",
             x_t, y_t, w_t, h_t,
@@ -118,7 +122,6 @@ class MenuPrincipal:
         )
         self.botones_juegos.clear()
 
-        # Responsivo: ajusta juegos_por_fila según ancho de pantalla, mínimo 1, máximo 3
         min_card_width = sx(170)
         margen_lateral = sx(40)
         espacio_h = sx(30)
@@ -152,7 +155,6 @@ class MenuPrincipal:
 
         mouse_pos = pygame.mouse.get_pos()
 
-        # Mejora: solo chequea colisiones con tarjetas ya dibujadas, no con la propia animada
         tarjetas_rects = []
 
         for i, (juego, imagen) in enumerate(zip(self.juegos, self.imagenes_dinos)):
@@ -162,7 +164,6 @@ class MenuPrincipal:
             y = inicio_y + (alto_juego + boton_alto + boton_espacio + espacio_v) * fila
             caja_rect = pygame.Rect(x, y, ancho_juego, alto_juego)
 
-            # Animación sutil al pasar el mouse sobre la tarjeta
             hover = caja_rect.collidepoint(mouse_pos)
             anim_scale = 1.06 if hover else 1.0
             anim_offset = -sy(6) if hover else 0
@@ -179,13 +180,12 @@ class MenuPrincipal:
             scale = min(max_w / img_w, max_h / img_h)
             new_w, new_h = int(img_w * scale), int(img_h * scale)
             img_x = card_x + (card_w - new_w) // 2
-            img_y = card_y + (card_h - new_h) // 2
+            img_y = card_y + anim_offset - (card_h - alto_juego) // 2
             img_rect_final = pygame.Rect(img_x, img_y, new_w, new_h)
 
             boton_y = card_y + card_h + boton_espacio
             boton_rect = pygame.Rect(card_x, boton_y, card_w, boton_alto)
 
-            # Solo chequea colisiones con tarjetas ya dibujadas (no con la propia animada)
             if any(
                 card_rect_anim.colliderect(r) or img_rect_final.colliderect(r) or boton_rect.colliderect(r)
                 for r in ocupados + tarjetas_rects
@@ -193,7 +193,7 @@ class MenuPrincipal:
                 continue
 
             card_color = (220, 240, 255) if hover else self.color_gris
-            JuegoBase.dibujar_caja_texto(self, card_x, card_y, card_w, card_h, card_color, radius=22)
+            dibujar_caja_texto(self.pantalla, card_x, card_y, card_w, card_h, card_color, radius=22)
             img = pygame.transform.smoothscale(imagen, (new_w, new_h))
             self.pantalla.blit(img, (img_x, img_y))
             tarjetas_rects.append(card_rect_anim)
@@ -206,41 +206,46 @@ class MenuPrincipal:
             self.botones_juegos.append((boton_real_rect, juego))
 
     def cargar_juego(self, juego):
-        # Lógica para cargar el juego real desde otro módulo
         nombre = juego["nombre"]
-        # Ejemplo: import dinámico según nombre
         try:
+            kwargs = {
+                "pantalla": self.pantalla,
+                "fondo_thread": self.fondo_thread,
+                "recursos": self.Recursos,
+                "crear_fondo": self.crear_fondo,
+                "crear_estrellas": self.crear_estrellas,
+                "estrellas": self.estrellas,
+                "estrellas_animadas": self.estrellas_animadas,
+            }
             if nombre == "Dino Suma/Resta":
                 from juegos.dino_suma import DinoSumaJuego
-                DinoSumaJuego(self.pantalla).ejecutar()
+                DinoSumaJuego(**kwargs).ejecutar()
             elif nombre == "DinoCazador":
                 from juegos.dino_cazador import DinoCazadorJuego
-                DinoCazadorJuego(self.pantalla).ejecutar()
+                DinoCazadorJuego(**kwargs).ejecutar()
             elif nombre == "DinoLógico":
                 from juegos.dino_logico import DinoLogicoJuego
-                DinoLogicoJuego(self.pantalla).ejecutar()
+                DinoLogicoJuego(**kwargs).ejecutar()
             elif nombre == "Memoria Jurásica":
                 from juegos.memoria_jurasica import MemoriaJurasicaJuego
-                MemoriaJurasicaJuego(self.pantalla).ejecutar()
+                MemoriaJurasicaJuego(**kwargs).ejecutar()
             elif nombre == "Rescate Jurásico":
                 from juegos.rescate_jurasico import RescateJurasicoJuego
-                RescateJurasicoJuego(self.pantalla).ejecutar()
+                RescateJurasicoJuego(**kwargs).ejecutar()
             else:
                 print(f"Juego no implementado: {nombre}")
         except Exception as e:
             print(f"Error al cargar el juego {nombre}: {e}")
 
     def mostrar_chatbot(self):
-        # Lógica para mostrar el chatbot desde otro módulo
         try:
             from chatbot.chatbot_ui import mostrar_chatbot_ui
             mostrar_chatbot_ui(self.pantalla, self.sx, self.sy)
         except Exception as e:
-            # Fallback simple si no existe el módulo
             sx, sy = self.sx, self.sy
             ancho, alto = self.pantalla.get_width(), self.pantalla.get_height()
             pygame.draw.rect(self.pantalla, (245, 245, 255), (sx(80), sy(120), ancho - sx(160), alto - sy(180)), border_radius=24)
-            JuegoBase.mostrar_texto_adaptativo(
+            mostrar_texto_adaptativo(
                 self.pantalla,
                 "ChatBot Dino",
                 sx(100), sy(140), ancho - sx(200), sy(60),
@@ -248,7 +253,7 @@ class MenuPrincipal:
                 (70, 130, 180),
                 centrado=True
             )
-            JuegoBase.mostrar_texto_adaptativo(
+            mostrar_texto_adaptativo(
                 self.pantalla,
                 "¡Hola! Soy Dino. Pregúntame cualquier cosa sobre matemáticas.",
                 sx(120), sy(220), ancho - sx(240), sy(60),
@@ -303,7 +308,6 @@ class MenuPrincipal:
                             break
                     if juego_base.nivel_actual in ["Fácil", "Normal", "Difícil"]:
                         self.manejar_eventos_menu(event)
-            # Usa el fondo animado threadsafe si está disponible
             if fondo_thread:
                 estrellas_animadas(pantalla, fondo, fondo_thread)
             else:
