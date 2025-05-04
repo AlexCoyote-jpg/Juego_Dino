@@ -27,7 +27,7 @@ class NavigationBar:
         espacio_entre_botones = max(10, int(base_boton_ancho * 0.18))
         border_radius = max(14, int(base_boton_alto * 0.38))
         barra_alto = int(base_boton_alto * 2.1)
-        margen_superior = max(10, int(alto * 0.04))
+        margen_superior = max(6, int(alto * 0.015))  # Margen superior reducido
         margen_lateral = max(18, int(ancho * 0.03))
         logo_margin = max(10, int(ancho * 0.01))
 
@@ -65,15 +65,17 @@ class NavigationBar:
         barra_x = max((ancho - barra_ancho) // 2, min_x_barra)
         barra_y = margen_superior
 
-        # Sombra suave para la barra
-        shadow = get_surface(barra_rect_width := (barra_ancho + 2 * max(10, int(base_boton_ancho * 0.12))),
-                             barra_alto, alpha=True)
+        # Sombra suave ajustada a los bordes de los botones
+        shadow_pad = 8
+        shadow_width = barra_ancho + shadow_pad * 2
+        shadow_height = barra_alto + shadow_pad * 2
+        shadow = get_surface(shadow_width, shadow_height, alpha=True)
         pygame.draw.rect(
             shadow, (0, 0, 0, 38),
-            (6, 6, barra_rect_width - 12, barra_alto - 12),
-            border_radius=border_radius + 8
+            (0, 0, shadow_width, shadow_height),
+            border_radius=border_radius + 10
         )
-        surface.blit(shadow, (barra_x - max(10, int(base_boton_ancho * 0.12)), barra_y + 4))
+        surface.blit(shadow, (barra_x - shadow_pad, barra_y - shadow_pad + 4))
 
         # Dibuja el logo alineado a la izquierda, ajustado y centrado verticalmente
         if logo is not None:
