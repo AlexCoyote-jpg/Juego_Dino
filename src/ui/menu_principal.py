@@ -155,7 +155,9 @@ class MenuPrincipal:
                         self.juego_base["nivel_actual"] = self.niveles[nav_result]
 
             # 1. Fondo dinámico
-            self.fondo.update(dt * 60)  # Multiplica por 60 para mantener velocidad similar
+            #Establecemos la velocidad de actualización 
+            Fps = 60
+            self.fondo.update(dt * Fps)  # Multiplica por 60 para mantener velocidad similar
             # Redibujar el fondo y las estrellas
             self.fondo.draw(self.pantalla)
             # 2. Elementos de la pantalla según selección
@@ -171,7 +173,7 @@ class MenuPrincipal:
             # 4. Transición visual si aplica
             manejar_transicion(self.juego_base)
             pygame.display.flip()
-            self.clock.tick(60)
+            self.clock.tick(Fps)
 
 def run_menu_principal(pantalla, fondo, images, sounds, config):
     menu = MenuPrincipal(pantalla, fondo, images, sounds, config)
