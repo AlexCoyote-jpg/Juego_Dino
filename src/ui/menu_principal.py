@@ -136,8 +136,12 @@ class MenuPrincipal:
 
     def run(self):
         running = True
+        last_time = time.time()
         while running:
-           
+            now = time.time()
+            dt = now - last_time
+            last_time = now
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -151,7 +155,7 @@ class MenuPrincipal:
                         self.juego_base["nivel_actual"] = self.niveles[nav_result]
 
             # 1. Fondo dinámico
-            self.fondo.update()
+            self.fondo.update(dt * 60)  # Multiplica por 60 para mantener velocidad similar
             # Redibujar el fondo y las estrellas
             self.fondo.draw(self.pantalla)
             # 2. Elementos de la pantalla según selección

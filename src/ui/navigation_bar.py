@@ -64,7 +64,7 @@ class NavigationBar:
             barra_y = 0
         # Fondo de la barra
         barra_color = (230, 230, 240)
-        pygame.draw.rect(surface, barra_color, (0, barra_y, ancho, barra_alto))
+        #pygame.draw.rect(surface, barra_color, (0, barra_y, ancho, barra_alto))
         # Dibuja el logo escalado
         if logo_scaled:
             surface.blit(logo_scaled, (logo_margin, barra_y + logo_y))

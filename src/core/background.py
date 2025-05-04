@@ -32,9 +32,9 @@ class FondoAnimado:
         self._make_background(ancho, alto)
         self._make_estrellas(ancho, alto)
 
-    def update(self):
+    def update(self, dt=1.0):
         for estrella in self.estrellas:
-            estrella.update(self.ancho, self.alto)
+            estrella.update(self.ancho, self.alto, dt)
 
     def draw(self, surface):
         surface.blit(self.fondo, (0, 0))
@@ -94,21 +94,21 @@ class Estrella:
         ])
         self.puntos = random.choice([5, 6, 7])
         angle = random.uniform(0, 2 * math.pi)
-        speed = random.uniform(120, 360) / 60.0 # velocidad en píxeles por segundo 20/80
+        speed = random.uniform(20, 80) / 60.0 # velocidad en píxeles por segundo 20/80
         self.dx = math.cos(angle) * speed
         self.dy = math.sin(angle) * speed
         self.base_radio = self.radio
         self.fase = random.uniform(0, 2 * math.pi)
         self.parpadeo_vel = random.uniform(1.5, 2.5)
 
-    def update(self, ancho, alto):
-        self.x += self.dx
-        self.y += self.dy
+    def update(self, ancho, alto, dt=1.0):
+        self.x += self.dx * dt
+        self.y += self.dy * dt
         if self.x < self.radio or self.x > ancho - self.radio:
             self.dx *= -1
         if self.y < self.radio or self.y > alto - self.radio:
             self.dy *= -1
-        self.fase += self.parpadeo_vel * 0.03
+        self.fase += self.parpadeo_vel * 0.03 * dt
         self.radio = int(self.base_radio * (0.85 + 0.15 * math.sin(self.fase)))
 
     def draw(self, surface):
