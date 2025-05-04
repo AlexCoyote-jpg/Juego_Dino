@@ -7,7 +7,7 @@ screen = pygame.display.set_mode((640, 480))
 
 # Load and render emojis
 emojis = pygame_emojis.emojis(screen)
-emojis.render_text_and_emojis("Hello /e😀/e /e👍/e", (255, 255, 255), (0, 0), 60)
+emojis.render_text_and_emojis("Hello /e😀/e /e👍/e /e🦖/e /e😊/e", (255, 255, 255), (0, 0), 60)
 
 # Update the display
 pygame.display.flip()
