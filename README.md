@@ -24,6 +24,7 @@ Liberias
 -PIP: python get-pip.py,pip install --upgrade pip, pip --versión,
 -PYGAME Y OPEINAI: pip install pygame openai
 -Pygame-gui:pip install pygame_gui
+-Emojis: pip install emoji
 
 Nota: Si quieres instalar automaticamente todas las libreria ejecuta python setup.py 
 

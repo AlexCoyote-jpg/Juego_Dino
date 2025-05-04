@@ -113,7 +113,7 @@ class MenuPrincipal:
         )
         mostrar_texto_adaptativo(
             self.pantalla,
-            "¡Hola! Soy Dino. Pregúntame cualquier cosa sobre matemáticas.",
+            "¡Hola! Soy Dino. Pregúntame cualquier cosa sobre matemáticas.🦖",
             self.sx(120), self.sy(220), ancho - self.sx(240), self.sy(60),
             self.font_texto,
             (30, 30, 30),

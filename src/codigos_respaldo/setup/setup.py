@@ -4,7 +4,7 @@ import sys
 def install(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package])
 
-required = ["pip", "pygame", "openai" , "pygame_gui"]
+required = ["pip", "pygame", "openai" , "pygame_gui" , "emoji"]
 
 for pkg in required:
     install(pkg)
