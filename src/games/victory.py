@@ -2,7 +2,7 @@
 Pantalla de victoria y botón para avanzar de nivel.
 """
 import pygame
-from .utils import mostrar_texto_adaptativo, dibujar_boton
+from ..ui.utils import mostrar_texto_adaptativo, dibujar_boton
 
 def mostrar_victoria(
     pantalla, sx, sy, ancho, alto, fuente_titulo, fuente_texto, juego_base, carta_rects,
