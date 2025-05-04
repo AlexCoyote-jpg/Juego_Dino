@@ -125,7 +125,13 @@ class MenuPrincipal:
                     nav_result = self.navbar.handle_event(event)
                     if nav_result is not None:
                         self.juego_base["nivel_actual"] = self.niveles[nav_result]
+            
             # Fondo dinámico
+            self.pantalla.blit(self.fondo, (0, 0))
+            for estrella in self.estrellas:
+                estrella.update(self.base_width, self.base_height)
+                estrella.draw(self.pantalla)
+            '''
             dibujar_fondo_animado(
                 self.pantalla,
                 self.pantalla.get_width(),
@@ -135,6 +141,7 @@ class MenuPrincipal:
                 self.fondo,
                 self.estrellas
             )
+            '''
             # Transición visual si aplica
             manejar_transicion(self.juego_base)
             # Barra de navegación con logo
