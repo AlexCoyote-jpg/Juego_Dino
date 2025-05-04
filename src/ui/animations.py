@@ -18,14 +18,3 @@ def get_surface(ancho, alto, alpha=False):
     if alpha:
         return pygame.Surface((ancho, alto), pygame.SRCALPHA)
     return pygame.Surface((ancho, alto))
-
-def dibujar_fondo_animado(pantalla, ancho, alto, fondo_thread, estrellas_animadas, fondo, estrellas):
-    try:
-        if fondo_thread:
-            estrellas_animadas(pantalla, fondo or get_surface(ancho, alto), fondo_thread)
-        else:
-            estrellas = estrellas or get_surface(ancho, alto, alpha=True)
-            fondo = fondo or get_surface(ancho, alto)
-            estrellas_animadas(pantalla, estrellas, fondo, ancho, alto)
-    except Exception:
-        pantalla.fill((135, 206, 250))  # Azul cielo por defecto

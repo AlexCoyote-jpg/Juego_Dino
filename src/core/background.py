@@ -5,10 +5,43 @@ Módulo para lógica de fondo animado y gestión de estrellas.
 import pygame
 import random
 import math
-import threading
+from collections import defaultdict
 
-# Gradiente de fondo
+class FondoAnimado:
+    """
+    Clase que gestiona el fondo pre-renderizado y las estrellas animadas.
+    Permite redimensionamiento dinámico y es eficiente en el redibujado.
+    """
+    def __init__(self, ancho, alto, color_fondo1=(255, 250, 240), color_fondo2=(255, 235, 205), max_estrellas=20):
+        self.color_fondo1 = color_fondo1
+        self.color_fondo2 = color_fondo2
+        self.max_estrellas = max_estrellas
+        self._make_background(ancho, alto)
+        self._make_estrellas(ancho, alto)
 
+    def _make_background(self, ancho, alto):
+        self.ancho = ancho
+        self.alto = alto
+        self.fondo = pygame.Surface((ancho, alto))
+        dibujar_gradiente(self.fondo, self.color_fondo1, self.color_fondo2, vertical=True)
+
+    def _make_estrellas(self, ancho, alto):
+        self.estrellas = crear_estrellas(ancho, alto, self.max_estrellas)
+
+    def resize(self, ancho, alto):
+        self._make_background(ancho, alto)
+        self._make_estrellas(ancho, alto)
+
+    def update(self):
+        for estrella in self.estrellas:
+            estrella.update(self.ancho, self.alto)
+
+    def draw(self, surface):
+        surface.blit(self.fondo, (0, 0))
+        for estrella in self.estrellas:
+            estrella.draw(surface)
+
+# --- Utilidades y funciones auxiliares ---
 def dibujar_gradiente(surf, color1, color2, vertical=True):
     width, height = surf.get_size()
     for i in range(height if vertical else width):
@@ -21,53 +54,35 @@ def dibujar_gradiente(surf, color1, color2, vertical=True):
         else:
             pygame.draw.line(surf, color, (i, 0), (i, height))
 
-def crear_fondo(ancho, alto, color_fondo1=(255, 250, 240), color_fondo2=(255, 235, 205)):
-    surf = pygame.Surface((ancho, alto))
-    dibujar_gradiente(surf, color_fondo1, color_fondo2, vertical=True)
-    return surf
-
-def crear_estrellas(ancho, alto, max_estrellas=20):
+# --- Colocación eficiente de estrellas usando cuadrícula ---
+def crear_estrellas_pantalla(ancho, alto, max_estrellas=20):
     area = ancho * alto
     num_estrellas = min(max(area // 30000, 6), max_estrellas)
+    cell_size = 48  # Tamaño de celda para evitar solapamientos
+    grid = defaultdict(list)
     estrellas = []
     intentos = 0
-    while len(estrellas) < num_estrellas and intentos < num_estrellas * 20:
+    max_intentos = num_estrellas * 30
+    while len(estrellas) < num_estrellas and intentos < max_intentos:
         nueva = Estrella(ancho, alto)
-        rect_nueva = pygame.Rect(nueva.x - nueva.radio, nueva.y - nueva.radio, nueva.radio * 2, nueva.radio * 2)
-        if all(not rect_nueva.colliderect(
-            pygame.Rect(e.x - e.radio, e.y - e.radio, e.radio * 2, e.radio * 2)
-        ) for e in estrellas):
+        cell_x = int(nueva.x // cell_size)
+        cell_y = int(nueva.y // cell_size)
+        colision = False
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for e in grid[(cell_x+dx, cell_y+dy)]:
+                    if nueva.colisiona_con(e):
+                        colision = True
+                        break
+                if colision:
+                    break
+            if colision:
+                break
+        if not colision:
             estrellas.append(nueva)
+            grid[(cell_x, cell_y)].append(nueva)
         intentos += 1
     return estrellas
-
-def actualizar_estrellas(estrellas, ancho, alto):
-    for estrella in estrellas:
-        estrella.update(ancho, alto)
-    return estrellas
-
-def dibujar_estrella(surface, color, center, radius, points=5):
-    angle = math.pi / points
-    vertices = []
-    for i in range(2 * points):
-        r = radius if i % 2 == 0 else radius // 2
-        theta = i * angle
-        x = center[0] + int(r * math.sin(theta))
-        y = center[1] - int(r * math.cos(theta))
-        vertices.append((x, y))
-    pygame.draw.polygon(surface, color, vertices)
-
-def dibujar_estrellas_animadas(pantalla, fondo, estrellas):
-    pantalla.blit(fondo, (0, 0))
-    for estrella in estrellas:
-        area_rect = pygame.Rect(
-            int(estrella.x - estrella.radio - 1),
-            int(estrella.y - estrella.radio - 1),
-            estrella.radio * 2 + 2,
-            estrella.radio * 2 + 2
-        )
-        pantalla.blit(fondo, area_rect, area_rect)
-        estrella.draw(pantalla)
 
 class Estrella:
     def __init__(self, ancho, alto):
@@ -99,46 +114,31 @@ class Estrella:
     def draw(self, surface):
         dibujar_estrella(surface, self.color, (int(self.x), int(self.y)), self.radio, points=self.puntos)
 
-# Opcional: animación de estrellas con hilos
-class FondoAnimadoThread(threading.Thread):
-    def __init__(self, estrellas, ancho, alto, update_interval=0.008):
-        super().__init__()
-        self.estrellas = estrellas
-        self.ancho = ancho
-        self.alto = alto
-        self.update_interval = update_interval
-        self._running = threading.Event()
-        self._running.set()
-        self._lock = threading.Lock()
+    def colisiona_con(self, otra):
+        dist = math.hypot(self.x - otra.x, self.y - otra.y)
+        return dist < (self.radio + otra.radio)
 
-    def run(self):
-        while self._running.is_set():
-            with self._lock:
-                for estrella in self.estrellas:
-                    estrella.update(self.ancho, self.alto)
-            pygame.time.wait(int(self.update_interval * 1000))
+def dibujar_estrella(surface, color, center, radius, points=5):
+    angle = math.pi / points
+    vertices = []
+    for i in range(2 * points):
+        r = radius if i % 2 == 0 else radius // 2
+        theta = i * angle
+        x = center[0] + int(r * math.sin(theta))
+        y = center[1] - int(r * math.cos(theta))
+        vertices.append((x, y))
+    pygame.draw.polygon(surface, color, vertices)
 
-    def stop(self):
-        self._running.clear()
+# --- API retrocompatible ---
+def crear_fondo(ancho, alto, color_fondo1=(255, 250, 240), color_fondo2=(255, 235, 205)):
+    surf = pygame.Surface((ancho, alto))
+    dibujar_gradiente(surf, color_fondo1, color_fondo2, vertical=True)
+    return surf
 
-    def update_size(self, ancho, alto):
-        with self._lock:
-            self.ancho = ancho
-            self.alto = alto
+def crear_estrellas(ancho, alto, max_estrellas=20):
+    return crear_estrellas_pantalla(ancho, alto, max_estrellas)
 
-    def get_estrellas(self):
-        with self._lock:
-            return list(self.estrellas)
-
-def estrellas_animadas_threadsafe(pantalla, fondo, estrellas_thread):
-    pantalla.blit(fondo, (0, 0))
-    estrellas = estrellas_thread.get_estrellas()
+def actualizar_estrellas(estrellas, ancho, alto):
     for estrella in estrellas:
-        area_rect = pygame.Rect(
-            int(estrella.x - estrella.radio - 1),
-            int(estrella.y - estrella.radio - 1),
-            estrella.radio * 2 + 2,
-            estrella.radio * 2 + 2
-        )
-        pantalla.blit(fondo, area_rect, area_rect)
-        estrella.draw(pantalla)
+        estrella.update(ancho, alto)
+    return estrellas

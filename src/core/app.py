@@ -4,7 +4,7 @@ import os
 import pygame
 from core.config import load_config
 from core.resources import load_images, load_sounds
-from core.background import crear_fondo, crear_estrellas, actualizar_estrellas, dibujar_estrellas_animadas
+from core.background import FondoAnimado
 from ui.menu_principal import run_menu_principal
 
 def run_app():
@@ -18,8 +18,7 @@ def run_app():
     pygame.display.set_caption("Jugando con Dino")
     images = load_images("assets/imagenes")
     sounds = load_sounds("assets/sonidos")
-    fondo = crear_fondo(ancho, alto)
-    estrellas = crear_estrellas(ancho, alto)
-    run_menu_principal(pantalla, fondo, estrellas, images, sounds, config)
+    fondo = FondoAnimado(ancho, alto)
+    run_menu_principal(pantalla, fondo, images, sounds, config)
     
 

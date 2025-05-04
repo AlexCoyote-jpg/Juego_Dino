@@ -1,30 +1,28 @@
 import pygame
-import sys
-import os
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'core')))
-from core.background import crear_fondo, crear_estrellas, actualizar_estrellas
+from background import FondoAnimado
 
 ANCHO, ALTO = 800, 600
 
 pygame.init()
-pantalla = pygame.display.set_mode((ANCHO, ALTO))
-pygame.display.set_caption('Prueba de Fondo y Estrellas')
+pantalla = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
+pygame.display.set_caption('Prueba de FondoAnimado')
 clock = pygame.time.Clock()
 
-fondo = crear_fondo(ANCHO, ALTO)
-estrellas = crear_estrellas(ANCHO, ALTO)
+# Usar la nueva clase eficiente
+fondo = FondoAnimado(ANCHO, ALTO)
 
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.VIDEORESIZE:
+            ANCHO, ALTO = event.w, event.h
+            pantalla = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
+            fondo.resize(ANCHO, ALTO)
 
-    pantalla.blit(fondo, (0, 0))
-    for estrella in estrellas:
-        estrella.update(ANCHO, ALTO)
-        estrella.draw(pantalla)
-
+    fondo.update()
+    fondo.draw(pantalla)
     pygame.display.flip()
     clock.tick(60)
 

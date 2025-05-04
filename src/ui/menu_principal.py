@@ -5,25 +5,23 @@ import pygame
 import time
 import random
 from ui.navigation_bar import NavigationBar
-from ui.animations import dibujar_fondo_animado, animar_dinos
+from ui.animations import animar_dinos
 from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
 from core.game_state import create_juego_base, manejar_transicion
 
 class MenuPrincipal:
-    def __init__(self, pantalla, fondo, estrellas, images, sounds, config, fondo_thread=None):
+    def __init__(self, pantalla, fondo, images, sounds, config):
         self.pantalla = pantalla
         self.fondo = fondo
-        self.estrellas = estrellas
         self.images = images
         self.sounds = sounds
         self.config = config
-        self.fondo_thread = fondo_thread
         self.base_width = pantalla.get_width()
         self.base_height = pantalla.get_height()
         # Acceso a recursos por nombre
         self.logo = self.images.get("dino_logo") if self.images else None
         self.niveles = ["Home", "Fácil", "Normal", "Difícil", "ChatBot"]
-        self.navbar = NavigationBar(self.niveles)
+        self.navbar = NavigationBar(self.niveles, down=False)
         self.juego_base = create_juego_base(pantalla, pantalla.get_width(), pantalla.get_height())
         self.imagenes_dinos = [self.images.get(f"dino{i+1}") for i in range(5)] if self.images else []
         self.font_titulo = pygame.font.SysFont("Segoe UI", 54, bold=True)
@@ -39,18 +37,30 @@ class MenuPrincipal:
         return int(y * self.pantalla.get_height() / self.base_height)
 
     def mostrar_home(self):
-        x_t, y_t, w_t, h_t = self.sx(130), self.sy(110), self.sx(640), self.sy(60)
+        # Dimensiones base
+        base_w, base_h = 900, 700
+        esc_x = self.pantalla.get_width() / base_w
+        esc_y = self.pantalla.get_height() / base_h
+        esc = min(esc_x, esc_y)
+        # Caja título centrada
+        w_t, h_t = int(640 * esc), int(60 * esc)
+        x_t = (self.pantalla.get_width() - w_t) // 2
+        y_t = int(110 * esc_y)
         dibujar_caja_texto(self.pantalla, x_t, y_t, w_t, h_t, (70, 130, 180))
+        font_titulo = pygame.font.SysFont("Segoe UI", int(54 * esc), bold=True)
         mostrar_texto_adaptativo(
             self.pantalla,
             "¡Bienvenido a Jugando con Dino!",
             x_t, y_t, w_t, h_t,
-            self.font_titulo,
+            font_titulo,
             (255,255,255),
             centrado=True
         )
-        caja_x, caja_y, caja_w, caja_h = self.sx(150), self.sy(180), self.sx(600), self.sy(320)
-        dibujar_caja_texto(self.pantalla, caja_x, caja_y, caja_w, caja_h, (255,255,255,220))
+        # Caja instrucciones centrada
+        w_c, h_c = int(600 * esc), int(320 * esc)
+        x_c = (self.pantalla.get_width() - w_c) // 2
+        y_c = int(180 * esc_y)
+        dibujar_caja_texto(self.pantalla, x_c, y_c, w_c, h_c, (255,255,255,220))
         instrucciones = (
             "¡Aprende matemáticas jugando con Dino y sus amigos!\n\n"
             "Selecciona una opción en la barra superior:\n\n"
@@ -60,24 +70,33 @@ class MenuPrincipal:
             "- ChatBot: Habla directamente con Dino y pregúntale sobre matemáticas\n\n"
             "¡Diviértete y aprende mientras juegas!"
         )
+        font_texto = pygame.font.SysFont("Segoe UI", int(28 * esc))
         mostrar_texto_adaptativo(
             self.pantalla,
             instrucciones,
-            caja_x, caja_y, caja_w, caja_h,
-            self.font_texto,
+            x_c, y_c, w_c, h_c,
+            font_texto,
             (30,30,30),
             centrado=True
         )
-        # Animación de dinos
+        # Animación de dinos centrada
         if time.time() - self.ultimo_cambio_dinos >= 3.0:
             self.dinos_actuales = random.sample(range(len(self.imagenes_dinos)), 3)
             self.ultimo_cambio_dinos = time.time()
-        dino_positions = [(self.sx(200), self.sy(520)), (self.sx(400), self.sy(520)), (self.sx(600), self.sy(520))]
+        dino_y = int(520 * esc_y)
+        dino_w = int(120 * esc)
+        dino_h = int(80 * esc)
+        espacio = int(80 * esc)
+        total_w = 3 * dino_w + 2 * espacio
+        x_ini = (self.pantalla.get_width() - total_w) // 2
+        dino_positions = [
+            (x_ini + i * (dino_w + espacio), dino_y) for i in range(3)
+        ]
         animar_dinos(
             self.pantalla,
             [self.imagenes_dinos[idx] for idx in self.dinos_actuales],
             dino_positions,
-            self.pantalla.get_width() / self.base_width,
+            esc,
             pygame.time.get_ticks()
         )
 
@@ -121,35 +140,24 @@ class MenuPrincipal:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.VIDEORESIZE:
+                    self.base_width, ALTO = event.w, event.h
+                    pantalla = pygame.display.set_mode((self.base_width, ALTO), pygame.RESIZABLE)
+                    self.fondo.resize(self.base_width, ALTO)
                 elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                    nav_result = self.navbar.handle_event(event)
+                    nav_result = self.navbar.handle_event(event, self.logo)
                     if nav_result is not None:
                         self.juego_base["nivel_actual"] = self.niveles[nav_result]
             
             # Fondo dinámico
-            self.pantalla.blit(self.fondo, (0, 0))
-            for estrella in self.estrellas:
-                estrella.update(self.base_width, self.base_height)
-                estrella.draw(self.pantalla)
-            '''
-            dibujar_fondo_animado(
-                self.pantalla,
-                self.pantalla.get_width(),
-                self.pantalla.get_height(),
-                self.fondo_thread,
-                self.estrellas,
-                self.fondo,
-                self.estrellas
-            )
-            '''
+            self.fondo.update()
+            self.fondo.draw(self.pantalla)
             # Transición visual si aplica
             manejar_transicion(self.juego_base)
             # Barra de navegación con logo
-            '''
-            if self.logo:
-                self.pantalla.blit(self.logo, (self.sx(20), self.sy(10)))
-            self.navbar.draw(self.pantalla)
-            '''
+
+            self.navbar.draw_with_logo(self.pantalla, self.logo)
+            
             # Pantalla según selección
             nivel = self.juego_base["nivel_actual"]
             if nivel == "Home":
@@ -161,6 +169,6 @@ class MenuPrincipal:
             pygame.display.flip()
             self.clock.tick(60)
 
-def run_menu_principal(pantalla, fondo, estrellas, images, sounds, config, fondo_thread=None):
-    menu = MenuPrincipal(pantalla, fondo, estrellas, images, sounds, config, fondo_thread)
+def run_menu_principal(pantalla, fondo, images, sounds, config):
+    menu = MenuPrincipal(pantalla, fondo, images, sounds, config)
     menu.run()
