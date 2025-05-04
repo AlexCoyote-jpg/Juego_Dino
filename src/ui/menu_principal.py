@@ -169,7 +169,7 @@ class MenuPrincipal:
             elif nivel == "ChatBot":
                 self.mostrar_chatbot()
             # 3. Barra de navegación con logo (siempre encima de todo)
-            self.navbar.draw_with_logo(self.pantalla, self.logo)
+            self.navbar.draw(self.pantalla, self.logo)
             # 4. Transición visual si aplica
             manejar_transicion(self.juego_base)
             pygame.display.flip()
