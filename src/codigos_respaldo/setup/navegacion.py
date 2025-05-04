@@ -107,11 +107,11 @@ def mostrar_texto_adaptativo(pantalla, texto, x, y, w, h, fuente_base=None, colo
         if centrado:
             rect.centerx = x + w // 2
         else:
-        if centrado:
-            rect.centerx = x + w // 2
-        else:
-            rect.x = x
-        rect.y = start_y + i * fuente.get_height()
+            if centrado:
+                rect.centerx = x + w // 2
+            else:
+                rect.x = x
+            rect.y = start_y + i * fuente.get_height()
         pantalla.blit(render, rect)
 
 def dibujar_caja_texto(pantalla, x, y, w, h, color, radius=18, texto=None, fuente=None, color_texto=(30,30,30)):
