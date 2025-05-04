@@ -48,6 +48,7 @@ class Boton:
         self.rect = pygame.Rect(x, y, ancho, alto)
         self.borde_blanco = borde_blanco
         self._gradiente_cache = None
+        self._last_hovered = None
 
     def draw(self, pantalla):
         mouse_pos = pygame.mouse.get_pos()
@@ -60,6 +61,8 @@ class Boton:
             self._draw_flat(pantalla, hovered)
 
     def _draw_apple(self, pantalla):
+        mouse_pos = pygame.mouse.get_pos()
+        hovered = self.rect.collidepoint(mouse_pos)
         shadow_offset = 3
         shadow_rect = pygame.Rect(self.x - 3, self.y - 3, self.ancho + 6, self.alto + 6)
         shadow_surf = pygame.Surface((shadow_rect.w, shadow_rect.h), pygame.SRCALPHA)
@@ -70,15 +73,20 @@ class Boton:
         )
         pantalla.blit(shadow_surf, shadow_rect.topleft)
 
-        if self._gradiente_cache is None:
+        # Cambia el gradiente si está hovered
+        color_top = self.color_hover if hovered and self.color_hover else self.color_top
+        color_bottom = self.color_hover if hovered and self.color_hover else self.color_bottom
+
+        if self._gradiente_cache is None or hovered != getattr(self, "_last_hovered", None):
             grad = pygame.Surface((1, self.alto), pygame.SRCALPHA)
             for i in range(self.alto):
                 ratio = i / (self.alto - 1) if self.alto > 1 else 0
-                r = int(self.color_top[0] * (1 - ratio) + self.color_bottom[0] * ratio)
-                g = int(self.color_top[1] * (1 - ratio) + self.color_bottom[1] * ratio)
-                b = int(self.color_top[2] * (1 - ratio) + self.color_bottom[2] * ratio)
+                r = int(color_top[0] * (1 - ratio) + color_bottom[0] * ratio)
+                g = int(color_top[1] * (1 - ratio) + color_bottom[1] * ratio)
+                b = int(color_top[2] * (1 - ratio) + color_bottom[2] * ratio)
                 grad.set_at((0, i), (r, g, b, 255))
             self._gradiente_cache = pygame.transform.scale(grad, (self.ancho, self.alto))
+            self._last_hovered = hovered
 
         gradiente = self._gradiente_cache.copy()
         mask = pygame.Surface((self.ancho, self.alto), pygame.SRCALPHA)
@@ -124,16 +132,27 @@ class Boton:
         return self.rect.collidepoint(pos)
 
 
-def mostrar_texto_adaptativo(pantalla, texto, x, y, w, h, fuente_base=None, color=(30, 30, 30), centrado=False):
+def mostrar_texto_adaptativo(
+    pantalla: pygame.Surface,
+    texto: str,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    fuente_base: pygame.font.Font = None,
+    color: tuple = (30, 30, 30),
+    centrado: bool = False
+):
+    """
+    Dibuja texto adaptando el tamaño de fuente para que quepa en el área dada.
+    Usa búsqueda binaria para optimizar el ajuste.
+    """
     fuente_base = fuente_base or get_default_font()
-    font_name = FUENTE_NOMBRE
     max_font_size = fuente_base.get_height()
     min_font_size = 12
     parrafos = texto.split('\n\n')
-    font_size = max_font_size
 
-    while font_size >= min_font_size:
-        fuente = obtener_fuente(font_size, fuente_base.get_bold())
+    def get_lines(font):
         lines = []
         for parrafo in parrafos:
             for raw_line in parrafo.split('\n'):
@@ -141,24 +160,39 @@ def mostrar_texto_adaptativo(pantalla, texto, x, y, w, h, fuente_base=None, colo
                 line = ""
                 for word in words:
                     test_line = f"{line} {word}".strip()
-                    if fuente.size(test_line)[0] <= w:
+                    if font.size(test_line)[0] <= w:
                         line = test_line
                     else:
-                        lines.append(line)
+                        if line:
+                            lines.append(line)
                         line = word
                 if line:
                     lines.append(line)
             if parrafo != parrafos[-1]:
                 lines.append("")
+        return lines
+
+    # Búsqueda binaria para el tamaño de fuente
+    left, right = min_font_size, max_font_size
+    best_size = min_font_size
+    best_lines = []
+    while left <= right:
+        mid = (left + right) // 2
+        fuente = obtener_fuente(mid, fuente_base.get_bold())
+        lines = get_lines(fuente)
         total_height = len(lines) * fuente.get_height()
         if total_height <= h:
-            break
-        font_size -= 1
+            best_size = mid
+            best_lines = lines
+            left = mid + 1
+        else:
+            right = mid - 1
 
+    fuente = obtener_fuente(best_size, fuente_base.get_bold())
+    total_height = len(best_lines) * fuente.get_height()
     start_y = y + (h - total_height) // 2 if centrado else y
-    fuente = obtener_fuente(font_size, fuente_base.get_bold())
 
-    for i, line in enumerate(lines):
+    for i, line in enumerate(best_lines):
         try:
             render = fuente.render(line, True, color)
         except Exception:
@@ -177,3 +211,5 @@ def dibujar_caja_texto(pantalla, x, y, w, h, color, radius=18, texto=None, fuent
         mostrar_texto_adaptativo(
             pantalla, texto, x, y, w, h, fuente or get_default_font(), color_texto, centrado=True
         )
+
+
