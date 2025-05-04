@@ -1,0 +1,43 @@
+Juego_Dino/
+│   README.md
+│   requirements.txt
+│
+├── assets/
+│   ├── images/
+│   └── sounds/
+│
+├── src/
+│   ├── core/                # Núcleo del motor y utilidades generales
+│   │   ├── __init__.py
+│   │   ├── resources.py     # Gestión de recursos (imágenes, sonidos)
+│   │   ├── config.py        # Configuración global y constantes
+│   │   ├── background.py    # Lógica de fondo animado y estrellas
+│   │   └── logger.py        # Configuración de logging
+│   │
+│   ├── ui/                  # Interfaz de usuario y menús
+│   │   ├── __init__.py
+│   │   ├── main_menu.py
+│   │   ├── navigation_bar.py
+│   │   └── screen_manager.py
+│   │
+│   ├── games/               # Juegos individuales
+│   │   ├── __init__.py
+│   │   └── memoria_jurasica.py
+│   │
+│   ├── chatbot/             # Chatbot y lógica relacionada
+│   │   ├── __init__.py
+│   │   └── connection.py
+│   │
+│   ├── settings/            # Configuraciones y carga de settings
+│   │   ├── __init__.py
+│   │   ├── config_loader.py
+│   │   └── settings.json
+│   │
+│   ├── tests/               # Pruebas unitarias y de integración
+│   │   ├── __init__.py
+│   │   └── test_memoria_jurasica.py
+│   │
+│   └── main.py              # Punto de entrada principal
+│
+└── docs/                    # Documentación y diagramas UML
+    └── uml.txt

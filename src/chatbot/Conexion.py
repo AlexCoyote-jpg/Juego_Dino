@@ -1,6 +1,6 @@
 from openai import OpenAI
 import logging
-from setup.Carga_Configs import conexiones, prompt_inicial
+from Configs import conexiones, prompt_inicial
 
 logging.basicConfig(level=logging.INFO)
 

@@ -1,0 +1,25 @@
+# app.py
+import logging
+import os
+import pygame
+from core.config import load_config
+from core.resources import load_images, load_sounds
+from core.background import crear_fondo, crear_estrellas, actualizar_estrellas, dibujar_estrellas_animadas
+from ui.menu_principal import run_menu_principal
+
+def run_app():
+    logging.basicConfig(level=logging.INFO)
+    pygame.init()
+    ruta_config = os.path.join(os.path.dirname(__file__), "../Settings/Configuracion.json")
+    config = load_config(ruta_config)
+    ancho = config["pantalla"] .get("ancho")
+    alto = config["pantalla"] .get("alto")
+    pantalla = pygame.display.set_mode((ancho, alto), pygame.RESIZABLE)
+    pygame.display.set_caption("Jugando con Dino")
+    images = load_images("assets/imagenes")
+    sounds = load_sounds("assets/sonidos")
+    fondo = crear_fondo(ancho, alto)
+    estrellas = crear_estrellas(ancho, alto)
+    run_menu_principal(pantalla, fondo, estrellas, images, sounds, config)
+    
+
