@@ -92,6 +92,7 @@ class MenuPrincipal:
         dino_positions = [
             (x_ini + i * (dino_w + espacio), dino_y) for i in range(3)
         ]
+        
         animar_dinos(
             self.pantalla,
             [self.imagenes_dinos[idx] for idx in self.dinos_actuales],
@@ -99,6 +100,8 @@ class MenuPrincipal:
             esc,
             pygame.time.get_ticks()
         )
+        
+        
 
     def mostrar_chatbot(self):
         ancho, alto = self.pantalla.get_width(), self.pantalla.get_height()

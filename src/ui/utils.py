@@ -9,7 +9,8 @@ class Boton:
         self, texto, x, y, ancho, alto,
         color_normal=(220, 230, 245), color_hover=None,
         color_texto=(30, 30, 30), fuente=None,
-        border_radius=12, estilo="apple", color_top=None, color_bottom=None
+        border_radius=12, estilo="apple", color_top=None, color_bottom=None,
+        borde_blanco=True  # Nuevo parámetro opcional
     ):
         self.texto = texto
         self.x = x
@@ -25,6 +26,7 @@ class Boton:
         self.color_top = color_top or (90, 180, 255)
         self.color_bottom = color_bottom or (0, 120, 255)
         self.rect = pygame.Rect(x, y, ancho, alto)
+        self.borde_blanco = borde_blanco  # Guarda la opción
 
     def draw(self, pantalla):
         mouse_pos = pygame.mouse.get_pos()
@@ -37,18 +39,18 @@ class Boton:
             self._draw_flat(pantalla, hovered)
 
     def _draw_apple(self, pantalla):
-        # Sombra suave
+        # Sombra suave y difusa para dar profundidad
         shadow_offset = 3
-        shadow_surf = pygame.Surface((self.ancho, self.alto), pygame.SRCALPHA)
+        shadow_surf = pygame.Surface((self.ancho + 6, self.alto + 6), pygame.SRCALPHA)
         pygame.draw.rect(
             shadow_surf,
-            (0, 0, 0, 40),
-            (shadow_offset, shadow_offset, self.ancho - shadow_offset, self.alto - shadow_offset),
-            border_radius=self.border_radius
+            (0, 0, 0, 38),
+            (shadow_offset, shadow_offset, self.ancho, self.alto),
+            border_radius=self.border_radius + 4
         )
-        pantalla.blit(shadow_surf, (self.x, self.y))
+        pantalla.blit(shadow_surf, (self.x - 3, self.y - 3))
 
-        # Botón con degradado
+        # Degradado vertical sutil y elegante
         temp_surf = pygame.Surface((self.ancho, self.alto), pygame.SRCALPHA)
         for i in range(self.alto):
             ratio = i / (self.alto - 1)
@@ -56,22 +58,25 @@ class Boton:
             g = int(self.color_top[1] * (1 - ratio) + self.color_bottom[1] * ratio)
             b = int(self.color_top[2] * (1 - ratio) + self.color_bottom[2] * ratio)
             pygame.draw.rect(temp_surf, (r, g, b, 255), (0, i, self.ancho, 1))
-        # Bordes redondeados
+
+        # Bordes suavemente redondeados y máscara para el degradado
         mask = pygame.Surface((self.ancho, self.alto), pygame.SRCALPHA)
         pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, self.ancho, self.alto), border_radius=self.border_radius)
         temp_surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         pantalla.blit(temp_surf, (self.x, self.y))
 
-        # Borde blanco semitransparente
-        pygame.draw.rect(
-            pantalla,
-            (255, 255, 255, 100),
-            (self.x, self.y, self.ancho, self.alto),
-            width=2,
-            border_radius=self.border_radius
-        )
+        # Borde blanco sutil (opcional, para resaltar el botón seleccionado)
+        if self.borde_blanco:
+            pygame.draw.rect(
+                pantalla,
+                (255, 255, 255, 90),
+                (self.x, self.y, self.ancho, self.alto),
+                width=2,
+                border_radius=self.border_radius
+            )
 
-        # Texto centrado
+       
+
         mostrar_texto_adaptativo(
             pantalla, self.texto, self.x, self.y, self.ancho, self.alto, self.fuente, self.color_texto, centrado=True
         )
@@ -158,9 +163,15 @@ def dibujar_caja_texto(pantalla, x, y, w, h, color, radius=18, texto=None, fuent
 
 
 '''
-# Botón Apple
-boton1 = Boton("Apple", 100, 100, 200, 60, estilo="apple")
-boton1.draw(pantalla)
+boton = Boton(
+    "Música", 100, 100, 120, 48,
+    color_texto=(255,255,255),
+    border_radius=16,
+    estilo="apple",
+    color_top=(255, 94, 98),      # Apple Music top
+    color_bottom=(255, 153, 102), # Apple Music bottom
+    color_hover=(255, 120, 120)
+)
 
 # Botón plano con hover
 boton2 = Boton("Flat", 100, 200, 200, 60, color_normal=(200,200,200), color_hover=(150,150,255), estilo="flat")
@@ -174,4 +185,28 @@ boton3.draw(pantalla)
 if boton1.collidepoint(pygame.mouse.get_pos()):
     # Acción
     pass
+    
+# Botón con borde blanco sutil (por defecto)
+boton1 = Boton(
+    "Música", 100, 100, 120, 48,
+    color_texto=(255,255,255),
+    border_radius=16,
+    estilo="apple",
+    color_top=(255, 94, 98),
+    color_bottom=(255, 153, 102)
+)
+boton1.draw(pantalla)
+
+# Botón SIN borde blanco
+boton2 = Boton(
+    "Sin borde", 250, 100, 120, 48,
+    color_texto=(255,255,255),
+    border_radius=16,
+    estilo="apple",
+    color_top=(60, 140, 255),
+    color_bottom=(0, 120, 255),
+    borde_blanco=False  # <--- Desactiva el borde blanco
+)
+boton2.draw(pantalla)    
+    
 '''
