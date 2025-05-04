@@ -1,3 +1,5 @@
+
+'''
 import pygame
 from game.resources import Recursos
 from game.menu import MenuPrincipal
@@ -20,3 +22,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''

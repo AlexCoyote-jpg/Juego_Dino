@@ -1,5 +1,5 @@
-from Configs import LLAMA
-from Conexion import obtener_respuesta
+from chatbot.Configs import LLAMA
+from chatbot.Conexion import obtener_respuesta
 def run_chatbot():
     print("Escribe 'salir' para terminar.")
     
@@ -17,3 +17,4 @@ def run_chatbot():
 
 if __name__ == "__main__":
     run_chatbot()
+#     run: python -m src.chatbot.tests.chat_terminal
