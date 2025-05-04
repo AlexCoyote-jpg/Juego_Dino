@@ -12,7 +12,8 @@ class NavigationBar:
         self.options = options
         self.selected = 0
         self.down = down
-        self._anim_size = 0
+        # Animación individual por botón
+        self._anim_sizes = [0.0 for _ in options]
 
     def draw(self, surface, logo=None, logo_height=None):
         ancho = surface.get_width()
@@ -25,34 +26,33 @@ class NavigationBar:
         boton_ancho_sel = int(base_boton_ancho * 1.15)
         boton_alto_sel = int(base_boton_alto * 1.15)
         espacio_entre_botones = max(10, int(base_boton_ancho * 0.18))
-        border_radius = max(14, int(base_boton_alto * 0.38))
-        barra_alto = int(base_boton_alto * 2.1)
-        margen_superior = max(6, int(alto * 0.015))  # Margen superior reducido
+        border_radius = max(14, int(base_boton_alto * 0.26))
+        margen_superior = max(20, int(alto * 0.04))
         margen_lateral = max(18, int(ancho * 0.03))
         logo_margin = max(10, int(ancho * 0.01))
 
-        # Logo adaptativo
-        max_logo_width = int(ancho * 0.16)
-        min_logo_width = 32
+        # --- LOGO: Escalado flexible y seguro ---
         if logo is not None:
-            logo_w = logo.get_width()
-            logo_h = logo.get_height()
-            logo_height = min(int(alto * 0.10), int(barra_alto * 1.1)) if logo_height is None else logo_height
-            scale = logo_height / logo_h
+            logo_w, logo_h = logo.get_width(), logo.get_height()
+            # Permite que el logo sea hasta el 25% del alto de la ventana o el 20% del ancho
+            max_logo_width = int(ancho * 0.20)
+            # Si se pasa logo_height, se usa como límite superior, si no, se calcula
+            if logo_height is not None:
+                max_logo_height = min(int(alto * 0.25), int(logo_height))
+            else:
+                max_logo_height = int(alto * 0.25)
+            # Calcula el factor de escala sin deformar el logo
+            scale = min(max_logo_width / logo_w, max_logo_height / logo_h, 1.5)
             logo_width = int(logo_w * scale)
-            if logo_width > max_logo_width:
-                logo_width = max_logo_width
-                scale = logo_width / logo_w
-                logo_height = int(logo_h * scale)
-            if logo_width < min_logo_width:
-                logo_width = min_logo_width
-                scale = logo_width / logo_w
-                logo_height = int(logo_h * scale)
+            logo_height_final = int(logo_h * scale)
+            # El margen superior del logo se ajusta para centrarlo respecto a la barra
+            margen_superior_logo = max(6, (base_boton_alto - logo_height_final) // 2 + margen_superior)
         else:
             logo_width = 0
-            logo_height = 0
+            logo_height_final = 0
+            margen_superior_logo = 0
 
-        # Calcula ancho total de la barra de botones
+        # --- Barra de botones ---
         barra_ancho = (num_opciones - 1) * espacio_entre_botones
         for i in range(num_opciones):
             if i == self.selected:
@@ -60,27 +60,28 @@ class NavigationBar:
             else:
                 barra_ancho += base_boton_ancho
 
-        # Calcula la posición de la barra: deja margen para el logo
         min_x_barra = margen_lateral + logo_width + logo_margin
         barra_x = max((ancho - barra_ancho) // 2, min_x_barra)
         barra_y = margen_superior
 
-        # Sombra suave ajustada a los bordes de los botones
-        shadow_pad = 8
-        shadow_width = barra_ancho + shadow_pad * 2
-        shadow_height = barra_alto + shadow_pad * 2
+        # --- Sombra de la barra ---
+        shadow_pad_x = max(12, int(base_boton_ancho * 0.13)) 
+        shadow_pad_y = max(12, int(base_boton_alto * 0.30))     
+        shadow_width = barra_ancho + shadow_pad_x * 2
+        shadow_height = base_boton_alto + shadow_pad_y * 2
+
         shadow = get_surface(shadow_width, shadow_height, alpha=True)
         pygame.draw.rect(
-            shadow, (0, 0, 0, 38),
+            shadow, (0, 0, 0, 32),
             (0, 0, shadow_width, shadow_height),
-            border_radius=border_radius + 10
+            border_radius=border_radius + 8
         )
-        surface.blit(shadow, (barra_x - shadow_pad, barra_y - shadow_pad + 4))
+        surface.blit(shadow, (barra_x - shadow_pad_x, barra_y - shadow_pad_y))
 
-        # Dibuja el logo alineado a la izquierda, ajustado y centrado verticalmente
+        # --- Dibuja el logo (puede sobresalir la sombra, pero no la barra) ---
         if logo is not None:
-            logo_scaled = pygame.transform.smoothscale(logo, (logo_width, logo_height))
-            logo_y = barra_y + (barra_alto - logo_height) // 2
+            logo_scaled = pygame.transform.smoothscale(logo, (logo_width, logo_height_final))
+            logo_y = margen_superior_logo
             logo_x = margen_lateral
             surface.blit(logo_scaled, (logo_x, logo_y))
 
@@ -100,28 +101,30 @@ class NavigationBar:
         ]
         color_texto = (30, 30, 50)
 
-        # Animación de transición para el botón seleccionado
-        ANIM_SPEED = 0.18
-        if not hasattr(self, "_anim_size"):
-            self._anim_size = 0
-        self._anim_size += ANIM_SPEED * ((1 if self.selected else 0) - self._anim_size)
+        # Animación de transición para cada botón
+        ANIM_SPEED = 0.22  # Ligeramente más rápido para mayor fluidez
+        for i in range(len(self.options)):
+            target = 1.0 if i == self.selected else 0.0
+            # Interpolación lineal suave (lerp)
+            self._anim_sizes[i] += (target - self._anim_sizes[i]) * ANIM_SPEED
 
         # Dibuja los botones
         self.botones = []
         x_actual = barra_x
         for i, opcion in enumerate(self.options):
+            anim = min(1.0, max(0.0, self._anim_sizes[i]))
             if i == self.selected:
-                boton_ancho = int(base_boton_ancho + (boton_ancho_sel - base_boton_ancho) * min(1, self._anim_size))
-                boton_alto = int(base_boton_alto + (boton_alto_sel - base_boton_alto) * min(1, self._anim_size))
+                boton_ancho = int(base_boton_ancho + (boton_ancho_sel - base_boton_ancho) * anim)
+                boton_alto = int(base_boton_alto + (boton_alto_sel - base_boton_alto) * anim)
                 color_top, color_bottom = colores[i % len(colores)]
                 borde_blanco = True
             else:
-                boton_ancho = base_boton_ancho
-                boton_alto = base_boton_alto
+                boton_ancho = int(base_boton_ancho + (boton_ancho_sel - base_boton_ancho) * anim)
+                boton_alto = int(base_boton_alto + (boton_alto_sel - base_boton_alto) * anim)
                 color_top, color_bottom = colores[i % len(colores)]
                 borde_blanco = False
 
-            y = barra_y + (barra_alto - boton_alto) // 2
+            y = barra_y + (base_boton_alto - boton_alto) // 2
 
             boton = Boton(
                 opcion, x_actual, y, boton_ancho, boton_alto,
