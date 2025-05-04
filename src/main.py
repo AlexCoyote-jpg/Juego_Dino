@@ -1,6 +1,5 @@
 # main.py
 import pygame
-import logging
 from setup.core import (
     Recursos,
     crear_fondo,
@@ -28,7 +27,6 @@ def crear_fondo_y_estrellas(ancho, alto):
     return fondo, estrellas
 
 def main():
-    logging.basicConfig(level=logging.INFO)
     ancho, alto = ANCHO, ALTO
     pantalla = inicializar_pygame(ancho, alto)
     cargar_recursos()
@@ -49,6 +47,8 @@ def main():
     try:
         menu.ejecutar()
     except Exception as e:
+        # Solo loguea errores críticos para no afectar el rendimiento
+        import logging
         logging.exception("Error inesperado en el menú principal")
     finally:
         fondo_thread.stop()
