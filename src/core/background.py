@@ -94,7 +94,7 @@ class Estrella:
         ])
         self.puntos = random.choice([5, 6, 7])
         angle = random.uniform(0, 2 * math.pi)
-        speed = random.uniform(20, 80) / 60.0
+        speed = random.uniform(120, 360) / 60.0 # velocidad en píxeles por segundo 20/80
         self.dx = math.cos(angle) * speed
         self.dy = math.sin(angle) * speed
         self.base_radio = self.radio

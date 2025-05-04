@@ -137,28 +137,24 @@ class MenuPrincipal:
     def run(self):
         running = True
         while running:
+           
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.VIDEORESIZE:
                     self.base_width, ALTO = event.w, event.h
-                    pantalla = pygame.display.set_mode((self.base_width, ALTO), pygame.RESIZABLE)
+                    self.pantalla = pygame.display.set_mode((self.base_width, ALTO), pygame.RESIZABLE)
                     self.fondo.resize(self.base_width, ALTO)
                 elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                     nav_result = self.navbar.handle_event(event, self.logo)
                     if nav_result is not None:
                         self.juego_base["nivel_actual"] = self.niveles[nav_result]
-            
-            # Fondo dinámico
-            self.fondo.update()
-            self.fondo.draw(self.pantalla)
-            # Transición visual si aplica
-            manejar_transicion(self.juego_base)
-            # Barra de navegación con logo
 
-            self.navbar.draw_with_logo(self.pantalla, self.logo)
-            
-            # Pantalla según selección
+            # 1. Fondo dinámico
+            self.fondo.update()
+            # Redibujar el fondo y las estrellas
+            self.fondo.draw(self.pantalla)
+            # 2. Elementos de la pantalla según selección
             nivel = self.juego_base["nivel_actual"]
             if nivel == "Home":
                 self.mostrar_home()
@@ -166,6 +162,10 @@ class MenuPrincipal:
                 self.mostrar_juegos(nivel)
             elif nivel == "ChatBot":
                 self.mostrar_chatbot()
+            # 3. Barra de navegación con logo (siempre encima de todo)
+            self.navbar.draw_with_logo(self.pantalla, self.logo)
+            # 4. Transición visual si aplica
+            manejar_transicion(self.juego_base)
             pygame.display.flip()
             self.clock.tick(60)
 
