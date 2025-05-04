@@ -1,10 +1,9 @@
-from Configs import servicios
+from Configs import LLAMA
 from Conexion import obtener_respuesta
 def run_chatbot():
     print("Escribe 'salir' para terminar.")
-    ia = servicios["llama"]
-    modelo = ia.model
-    key = ia.api_key
+    
+
     while True:
         user_input = input("Tú: ").strip()
         if user_input.lower() == "salir":
@@ -13,7 +12,7 @@ def run_chatbot():
         if not user_input:
             print("Por favor, escribe algo.")
             continue
-        response_text = obtener_respuesta(user_input, modelo, key)
+        response_text = obtener_respuesta(user_input, LLAMA.model, LLAMA.api_key)
         print("Chatbot:", response_text)
 
 if __name__ == "__main__":
