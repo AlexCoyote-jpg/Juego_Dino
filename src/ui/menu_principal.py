@@ -7,7 +7,7 @@ import random
 from ui.navigation_bar import NavigationBar
 from ui.animations import animar_dinos
 from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
-from core.game_state import create_juego_base, manejar_transicion
+from src.games.game_state import create_juego_base, manejar_transicion
 
 class MenuPrincipal:
     def __init__(self, pantalla, fondo, images, sounds, config):
