@@ -1,7 +1,7 @@
 import sys
 import os
 import pygame
-from core.Emojis import mostrar_alternativo_adaptativo
+from ui.Emojis import mostrar_alternativo_adaptativo
 from ui.utils import dibujar_caja_texto
 
 min_font_size = 6  # o incluso 4

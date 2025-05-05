@@ -7,28 +7,43 @@ import random
 from ui.navigation_bar import NavigationBar
 from ui.animations import animar_dinos
 from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
-from src.games.game_state import create_juego_base, manejar_transicion
+from ui.Emojis import mostrar_alternativo_adaptativo
+from core.game_state import create_juego_base, manejar_transicion
 
 class MenuPrincipal:
     def __init__(self, pantalla, fondo, images, sounds, config):
+        # --- Inicialización de pantalla y dimensiones base ---
         self.pantalla = pantalla
-        self.fondo = fondo
-        self.images = images
-        self.sounds = sounds
-        self.config = config
         self.base_width = pantalla.get_width()
         self.base_height = pantalla.get_height()
-        # Acceso a recursos por nombre
-        self.logo = self.images.get("dino_logo") if self.images else None
+
+        # --- Recursos principales ---
+        self.fondo = fondo                # Fondo animado
+        self.images = images              # Diccionario de imágenes
+        self.sounds = sounds              # Diccionario de sonidos
+        self.config = config              # Configuración general
+
+        # --- Barra de navegación y niveles ---
         self.niveles = ["Home", "Fácil", "Normal", "Difícil", "ChatBot"]
         self.navbar = NavigationBar(self.niveles, down=False)
-        self.juego_base = create_juego_base(pantalla, pantalla.get_width(), pantalla.get_height())
+        self.logo = self.images.get("dino_logo") if self.images else None
+
+        # --- Recursos gráficos de dinosaurios ---
         self.imagenes_dinos = [self.images.get(f"dino{i+1}") for i in range(5)] if self.images else []
+        self.dinos_actuales = [0, 1, 2]   # Índices de los dinos mostrados actualmente
+        self.ultimo_cambio_dinos = time.time()  # Para animación de dinos
+
+        # --- Tipografías principales ---
         self.font_titulo = pygame.font.SysFont("Segoe UI", 54, bold=True)
         self.font_texto = pygame.font.SysFont("Segoe UI", 28)
-        self.ultimo_cambio_dinos = time.time()
-        self.dinos_actuales = [0, 1, 2]
+
+        # --- Estado de dificultad seleccionada ---
         self.dificultad_seleccionada = "Fácil"
+
+        # --- Estado y lógica del juego base ---
+        self.juego_base = create_juego_base(pantalla, pantalla.get_width(), pantalla.get_height())
+
+        # --- Reloj para control de FPS ---
         self.clock = pygame.time.Clock()
 
     def sx(self, x):
@@ -114,7 +129,7 @@ class MenuPrincipal:
             (70, 130, 180),
             centrado=True
         )
-        mostrar_texto_adaptativo(
+        mostrar_alternativo_adaptativo(
             self.pantalla,
             "¡Hola! Soy Dino. Pregúntame cualquier cosa sobre matemáticas.Σ 🧠 π 🦖",
             self.sx(120), self.sy(220), ancho - self.sx(240), self.sy(60),
