@@ -10,6 +10,7 @@ def juego_sumas(pantalla, config):
     input_text = ""
     feedback = ""
     color_feedback = (0, 0, 0)
+    print("¡Juego de sumas iniciado!")
 
     # Genera una nueva suma
     def nueva_suma():
@@ -73,3 +74,68 @@ def juego_sumas(pantalla, config):
 
         pygame.display.flip()
         clock.tick(30)
+
+
+'''
+# Ejemplo de uso
+# import pygame
+import time
+from games.juego_ejemplo import juego_sumas  # Importa tu juego aquí
+# ...otros imports necesarios...
+
+class MenuPrincipal:
+    # ...otros métodos y __init__...
+
+    def mostrar_juegos(self, dificultad):
+        # Dibuja el título de la sección de juegos
+        x_t, y_t, w_t, h_t = self.sx(130), self.sy(110), self.sx(640), self.sy(60)
+        dibujar_caja_texto(self.pantalla, x_t, y_t, w_t, h_t, (70, 130, 180))
+        mostrar_texto_adaptativo(
+            self.pantalla,
+            f"Juegos de nivel {dificultad}",
+            x_t, y_t, w_t, h_t,
+            self.font_titulo,
+            (255,255,255),
+            centrado=True
+        )
+        # --- Botón para el juego de sumas ---
+        # Puedes agregar más botones para otros juegos aquí
+        self.boton_sumas = pygame.Rect(self.sx(250), self.sy(220), self.sx(300), self.sy(60))
+        dibujar_caja_texto(self.pantalla, *self.boton_sumas, (180, 220, 255))
+        mostrar_texto_adaptativo(
+            self.pantalla, "Juego de Sumas", *self.boton_sumas, self.font_texto, (30,30,30), centrado=True
+        )
+
+    def run(self):
+        running = True
+        last_time = time.time()
+        while running:
+            now = time.time()
+            dt = now - last_time
+            last_time = now
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.VIDEORESIZE:
+                    # Redimensiona la pantalla si es necesario
+                    pass
+                elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                    # --- Detecta clic en el botón del juego de sumas ---
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if hasattr(self, "boton_sumas") and self.boton_sumas.collidepoint(event.pos):
+                            # Llama al juego de sumas y pausa el menú principal hasta que termine
+                            juego_sumas(self.pantalla, self.config)
+                            # Al volver, puedes refrescar la pantalla o el menú si es necesario
+
+            # --- Renderiza el menú principal y los botones ---
+            self.pantalla.fill((255, 255, 255))
+            self.mostrar_juegos(self.dificultad_seleccionada)
+            pygame.display.flip()
+            self.clock.tick(60)
+
+# Notas:
+# - Puedes agregar más botones para otros juegos repitiendo el patrón de self.boton_sumas.
+# - Si tienes varios juegos, usa una lista de botones y un diccionario para asociar cada botón a una función de juego.
+# - Puedes modificar el texto, colores y posiciones de los botones según tu diseño.
+# '''

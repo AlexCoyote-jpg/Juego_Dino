@@ -5,10 +5,11 @@ import pygame
 import time
 import random
 from ui.navigation_bar import NavigationBar
-from ui.animations import animar_dinos
+from ui.animations import animar_dinos, dibujar_caja_juegos
 from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
 from ui.Emojis import mostrar_alternativo_adaptativo
 from core.game_state import create_juego_base, manejar_transicion
+from games import JUEGOS_DISPONIBLES
 
 class MenuPrincipal:
     def __init__(self, pantalla, fondo, images, sounds, config):
@@ -151,6 +152,26 @@ class MenuPrincipal:
         )
         # Aquí podrías mostrar botones de juegos según la dificultad
         # Ejemplo: dibujar_caja_texto(...), mostrar_texto_adaptativo(...)
+        # Área para la grilla de juegos (ajusta estos valores según tu diseño)
+        x = self.sx(100)
+        y = self.sy(200)
+        w = self.pantalla.get_width() - self.sx(200)
+        h = self.pantalla.get_height() - self.sy(260)
+        margen = 24
+        tam_caja = 140
+        self.juego_rects = dibujar_caja_juegos(
+            self.pantalla,
+            x, y, w, h,
+            juegos=JUEGOS_DISPONIBLES,
+            recursos=self.images,
+            color=(255,255,255),
+            alpha=30,
+            radius=24,
+            margen=margen,
+            tam_caja=tam_caja,
+            fuente=self.font_texto
+        )
+        
 
     def run(self):
         running = True
@@ -171,6 +192,14 @@ class MenuPrincipal:
                     nav_result = self.navbar.handle_event(event, self.logo)
                     if nav_result is not None:
                         self.juego_base["nivel_actual"] = self.niveles[nav_result]
+                    # Solo procesa el click si el evento es de mouse y tiene 'pos'
+                    if event.type == pygame.MOUSEBUTTONDOWN and hasattr(event, "pos"):
+                        if hasattr(self, "juego_rects"):
+                            for idx, rect in enumerate(self.juego_rects):
+                                if rect.collidepoint(event.pos):
+                                    print(f"Click en juego {idx}: {JUEGOS_DISPONIBLES[idx]['nombre']}")
+                                    juego = JUEGOS_DISPONIBLES[idx]
+                                    juego["func"](self.pantalla, self.config)
 
             # 1. Fondo dinámico
             #Establecemos la velocidad de actualización 
