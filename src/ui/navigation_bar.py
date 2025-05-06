@@ -85,7 +85,7 @@ class NavigationBar:
                 color_texto=txt_color, fuente=fuente,
                 border_radius=radius, estilo="apple",
                 color_top=color_top, color_bottom=color_bottom,
-                borde_blanco=borde_blanco
+                border_color=borde_blanco
             )
             boton.draw(surface)
             self.botones.append(boton)
