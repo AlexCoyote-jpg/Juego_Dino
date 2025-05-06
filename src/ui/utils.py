@@ -50,6 +50,212 @@ def get_dirty_rects():
     return rects
 
 # --- Boton Class ---
+class Boton_Images:
+    """
+    Botón avanzado con soporte para imágenes, personalización de posición de imagen, texto, colores,
+    bordes, radios, estilos y optimización de renderizado.
+    """
+    def __init__(
+        self,
+        texto: str,
+        x: int,
+        y: int,
+        ancho: int,
+        alto: int,
+        imagen: Optional[pygame.Surface] = None,
+        imagen_pos: str = "left",  # "left", "right", "top", "bottom", "center"
+        imagen_padding: int = 8,
+        imagen_alpha: Optional[int] = None,
+        color_normal: Tuple[int, int, int] = (220, 230, 245),
+        color_hover: Optional[Tuple[int, int, int]] = None,
+        color_texto: Tuple[int, int, int] = (30, 30, 30),
+        fuente: Optional[pygame.font.Font] = None,
+        fuente_size: Optional[int] = None,
+        texto_negrita: bool = False,
+        texto_cursiva: bool = False,
+        texto_subrayado: bool = False,
+        texto_espaciado: int = 0,
+        texto_visible: bool = True,
+        texto_alineacion: str = "center",  # "left", "center", "right"
+        border_radius: int = 12,
+        estilo: str = "apple",  # "apple", "flat", "round"
+        color_top: Optional[Tuple[int, int, int]] = None,
+        color_bottom: Optional[Tuple[int, int, int]] = None,
+        border_color: Optional[Tuple[int, int, int, int]] = None,
+        border_width: int = 2,
+        padding: int = 12,
+        texto_centrado: bool = True,
+        texto_adaptativo: bool = False,
+    ):
+        self.texto = texto
+        self.x = x
+        self.y = y
+        self.ancho = ancho
+        self.alto = alto
+        self.imagen = imagen
+        self.imagen_pos = imagen_pos
+        self.imagen_padding = imagen_padding
+        self.imagen_alpha = imagen_alpha
+        self.color_normal = color_normal
+        self.color_hover = color_hover
+        self.color_texto = color_texto
+        self.fuente = fuente or obtener_fuente(fuente_size or 20, texto_negrita)
+        self.fuente.set_bold(texto_negrita)
+        self.fuente.set_italic(texto_cursiva)
+        self.fuente.set_underline(texto_subrayado)
+        self.texto_espaciado = texto_espaciado
+        self.texto_visible = texto_visible
+        self.texto_alineacion = texto_alineacion
+        self.border_radius = border_radius
+        self.estilo = estilo
+        self.color_top = color_top or (90, 180, 255)
+        self.color_bottom = color_bottom or (0, 120, 255)
+        self.rect = pygame.Rect(x, y, ancho, alto)
+        self.border_color = (255, 255, 255, 90) if border_color is True else border_color
+        self.border_width = border_width
+        self.padding = padding
+        self.texto_centrado = texto_centrado
+        self.texto_adaptativo = texto_adaptativo
+        self._shadow_surf = self._make_shadow()
+        self._gradiente_cache = None
+        self._last_hovered = None
+
+    def _make_shadow(self):
+        shadow_offset = 3
+        shadow_rect = pygame.Rect(self.x - 3, self.y - 3, self.ancho + 6, self.alto + 6)
+        shadow_surf = pygame.Surface((shadow_rect.w, shadow_rect.h), pygame.SRCALPHA)
+        pygame.draw.rect(
+            shadow_surf, (0, 0, 0, 38),
+            (shadow_offset, shadow_offset, self.ancho, self.alto),
+            border_radius=self.border_radius + 4
+        )
+        return shadow_surf
+
+    def draw(self, pantalla):
+        mouse_pos = pygame.mouse.get_pos()
+        hovered = self.rect.collidepoint(mouse_pos)
+        if self.estilo == "apple":
+            self._draw_apple(pantalla, hovered)
+        elif self.estilo == "round":
+            self._draw_round(pantalla, hovered)
+        else:
+            self._draw_flat(pantalla, hovered)
+        mark_dirty(self.rect)
+
+    def _draw_apple(self, pantalla, hovered):
+        pantalla.blit(self._shadow_surf, (self.x - 3, self.y - 3))
+        color_top = self.color_hover if hovered and self.color_hover else self.color_top
+        color_bottom = self.color_hover if hovered and self.color_hover else self.color_bottom
+
+        gradiente = get_gradient(self.ancho, self.alto, color_top, color_bottom)
+        mask = pygame.Surface((self.ancho, self.alto), pygame.SRCALPHA)
+        pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, self.ancho, self.alto), border_radius=self.border_radius)
+        gradiente = gradiente.copy()
+        gradiente.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        pantalla.blit(gradiente, (self.x, self.y))
+
+        if self.border_color and self.border_width > 0:
+            pygame.draw.rect(
+                pantalla, self.border_color,
+                (self.x, self.y, self.ancho, self.alto),
+                width=self.border_width, border_radius=self.border_radius
+            )
+
+        self._draw_content(pantalla)
+
+    def _draw_flat(self, pantalla, hovered):
+        color = self.color_hover if hovered and self.color_hover else self.color_normal
+        pygame.draw.rect(pantalla, color, self.rect, border_radius=self.border_radius)
+        if self.border_color and self.border_width > 0:
+            pygame.draw.rect(
+                pantalla, self.border_color,
+                (self.x, self.y, self.ancho, self.alto),
+                width=self.border_width, border_radius=self.border_radius
+            )
+        self._draw_content(pantalla)
+
+    def _draw_round(self, pantalla, hovered):
+        color = self.color_hover if hovered and self.color_hover else self.color_normal
+        radius = min(self.ancho, self.alto) // 2
+        center = (self.x + self.ancho // 2, self.y + self.alto // 2)
+        pygame.draw.circle(pantalla, color, center, radius)
+        if self.border_color and self.border_width > 0:
+            pygame.draw.circle(
+                pantalla, self.border_color, center, radius, width=self.border_width
+            )
+        self._draw_content(pantalla, round_mode=True)
+
+    def _draw_content(self, pantalla, round_mode=False):
+        area = self.rect.inflate(-2 * self.padding, -2 * self.padding)
+        img = self.imagen
+        if img and self.imagen_alpha is not None:
+            img = img.copy()
+            img.set_alpha(self.imagen_alpha)
+        img_rect = img.get_rect() if img else pygame.Rect(0, 0, 0, 0)
+
+        # Layout imagen
+        if img:
+            if self.imagen_pos == "left":
+                img_rect.topleft = (area.x, area.y + (area.height - img_rect.height) // 2)
+            elif self.imagen_pos == "right":
+                img_rect.topright = (area.right, area.y + (area.height - img_rect.height) // 2)
+            elif self.imagen_pos == "top":
+                img_rect.midtop = (area.centerx, area.y)
+            elif self.imagen_pos == "bottom":
+                img_rect.midbottom = (area.centerx, area.bottom)
+            elif self.imagen_pos == "center":
+                img_rect.center = area.center
+            else:
+                img_rect.topleft = (area.x, area.y)
+            pantalla.blit(img, img_rect)
+
+        # Layout texto
+        if self.texto_visible and self.texto:
+            text_area_x = area.x
+            text_area_y = area.y
+            text_area_w = area.width
+            text_area_h = area.height
+
+            # Ajusta área de texto si hay imagen a izquierda/derecha
+            if img and self.imagen_pos in ("left", "right"):
+                img_w = img_rect.width + self.imagen_padding
+                if self.imagen_pos == "left":
+                    text_area_x += img_w
+                    text_area_w -= img_w
+                else:
+                    text_area_w -= img_w
+
+            if self.texto_adaptativo:
+                mostrar_texto_adaptativo(
+                    pantalla, self.texto,
+                    text_area_x, text_area_y, text_area_w, text_area_h,
+                    self.fuente, self.color_texto,
+                    centrado=(self.texto_alineacion == "center")
+                )
+            else:
+                lines = self.texto.split('\n')
+                text_surfs = [self.fuente.render(line, True, self.color_texto) for line in lines]
+                text_height = sum(s.get_height() + self.texto_espaciado for s in text_surfs) - self.texto_espaciado
+                if self.texto_alineacion == "center":
+                    txt_x = text_area_x + (text_area_w - max((s.get_width() for s in text_surfs), default=0)) // 2
+                elif self.texto_alineacion == "right":
+                    txt_x = text_area_x + text_area_w - max((s.get_width() for s in text_surfs), default=0)
+                else:  # left
+                    txt_x = text_area_x
+                txt_y = text_area_y + (text_area_h - text_height) // 2
+
+                y_offset = 0
+                for surf in text_surfs:
+                    pantalla.blit(surf, (txt_x, txt_y + y_offset))
+                    y_offset += surf.get_height() + self.texto_espaciado
+
+    def collidepoint(self, pos):
+        if self.estilo == "round":
+            center = (self.x + self.ancho // 2, self.y + self.alto // 2)
+            radius = min(self.ancho, self.alto) // 2
+            return (pos[0] - center[0]) ** 2 + (pos[1] - center[1]) ** 2 <= radius ** 2
+        return self.rect.collidepoint(pos)
+
 class Boton:
     def __init__(
         self, texto, x, y, ancho, alto,
@@ -58,7 +264,10 @@ class Boton:
         border_radius=12, estilo="apple",
         color_top=None, color_bottom=None,
         border_color: Optional[Tuple[int, int, int, int]] = None,
-        border_width: int = 2
+        border_width: int = 2,
+        texto_visible: bool = True,
+        texto_espaciado: int = 0,
+        texto_adaptativo: bool = True,
     ):
         self.texto = texto
         self.x = x
@@ -76,9 +285,11 @@ class Boton:
         self.rect = pygame.Rect(x, y, ancho, alto)
         self.border_color = (255, 255, 255, 90) if border_color is True else border_color
         self.border_width = border_width
+        self.texto_visible = texto_visible
+        self.texto_espaciado = texto_espaciado
+        self.texto_adaptativo = texto_adaptativo
         self._gradiente_cache = None
         self._last_hovered = None
-        # Pre-calculate shadow surface
         self._shadow_surf = self._make_shadow()
 
     def _make_shadow(self):
@@ -122,10 +333,22 @@ class Boton:
                 width=self.border_width, border_radius=self.border_radius
             )
 
-        mostrar_texto_adaptativo(
-            pantalla, self.texto, self.x, self.y, self.ancho, self.alto,
-            self.fuente, self.color_texto, centrado=True
-        )
+        if self.texto_visible and self.texto:
+            if self.texto_adaptativo:
+                mostrar_texto_adaptativo(
+                    pantalla, self.texto, self.x, self.y, self.ancho, self.alto,
+                    self.fuente, self.color_texto, centrado=True
+                )
+            else:
+                lines = self.texto.split('\n')
+                text_surfs = [self.fuente.render(line, True, self.color_texto) for line in lines]
+                text_height = sum(s.get_height() + self.texto_espaciado for s in text_surfs) - self.texto_espaciado
+                txt_x = self.x + (self.ancho - max((s.get_width() for s in text_surfs), default=0)) // 2
+                txt_y = self.y + (self.alto - text_height) // 2
+                y_offset = 0
+                for surf in text_surfs:
+                    pantalla.blit(surf, (txt_x, txt_y + y_offset))
+                    y_offset += surf.get_height() + self.texto_espaciado
 
     def _draw_flat(self, pantalla, hovered):
         color = self.color_hover if hovered and self.color_hover else self.color_normal
@@ -133,12 +356,19 @@ class Boton:
         if self.border_color and self.border_width > 0:
             pygame.draw.rect(
                 pantalla, self.border_color,
-                self.rect, width=self.border_width, border_radius=self.border_radius
+                (self.x, self.y, self.ancho, self.alto),
+                width=self.border_width, border_radius=self.border_radius
             )
-        mostrar_texto_adaptativo(
-            pantalla, self.texto, self.x, self.y, self.ancho, self.alto,
-            self.fuente, self.color_texto, centrado=True
-        )
+        if self.texto_visible and self.texto:
+            lines = self.texto.split('\n')
+            text_surfs = [self.fuente.render(line, True, self.color_texto) for line in lines]
+            text_height = sum(s.get_height() + self.texto_espaciado for s in text_surfs) - self.texto_espaciado
+            txt_x = self.x + (self.ancho - max((s.get_width() for s in text_surfs), default=0)) // 2
+            txt_y = self.y + (self.alto - text_height) // 2
+            y_offset = 0
+            for surf in text_surfs:
+                pantalla.blit(surf, (txt_x, txt_y + y_offset))
+                y_offset += surf.get_height() + self.texto_espaciado
 
     def _draw_round(self, pantalla, hovered):
         color = self.color_hover if hovered and self.color_hover else self.color_normal
@@ -149,10 +379,16 @@ class Boton:
             pygame.draw.circle(
                 pantalla, self.border_color, center, radius, width=self.border_width
             )
-        mostrar_texto_adaptativo(
-            pantalla, self.texto, self.x, self.y, self.ancho, self.alto,
-            self.fuente, self.color_texto, centrado=True
-        )
+        if self.texto_visible and self.texto:
+            lines = self.texto.split('\n')
+            text_surfs = [self.fuente.render(line, True, self.color_texto) for line in lines]
+            text_height = sum(s.get_height() + self.texto_espaciado for s in text_surfs) - self.texto_espaciado
+            txt_x = self.x + (self.ancho - max((s.get_width() for s in text_surfs), default=0)) // 2
+            txt_y = self.y + (self.alto - text_height) // 2
+            y_offset = 0
+            for surf in text_surfs:
+                pantalla.blit(surf, (txt_x, txt_y + y_offset))
+                y_offset += surf.get_height() + self.texto_espaciado
 
     def collidepoint(self, pos):
         if self.estilo == "round":
