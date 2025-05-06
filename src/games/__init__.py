@@ -2,16 +2,17 @@
 # En __init__:
 # Permite que la carpeta sea reconocida como un módulo de Python
 
-from .juego_ejemplo import juego_sumas
+from .juego_ejemplo import iniciar_juego_sumas
+from .memoria_jurasica import iniciar_juego_memoria
 # from .otro_juego import otro_juego  # Descomenta y agrega más juegos aquí
 
 # Lista centralizada de juegos (opcional, para usar en el menú principal)
 JUEGOS_DISPONIBLES = [
-    {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino1"},
-    {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino2"},
-    {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino3"},
-    {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino4"},
-    {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino5"},
+    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino1"},
+    {"nombre": "Juego de memorama", "func": iniciar_juego_memoria , "imagen": "dino2"},
+    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino3"},
+    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino4"},
+    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino5"},
   
     
     

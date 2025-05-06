@@ -2,7 +2,7 @@
 Pantalla de victoria y botón para avanzar de nivel.
 """
 import pygame
-from ..ui.utils import mostrar_texto_adaptativo, dibujar_boton
+from ui.utils import mostrar_texto_adaptativo, Boton
 
 def mostrar_victoria(
     pantalla, sx, sy, ancho, alto, fuente_titulo, fuente_texto, juego_base, carta_rects,
@@ -31,12 +31,15 @@ def mostrar_victoria(
         x_panel, y_panel + sy(80), ancho_panel, sy(40),
         fuente_texto, (30, 30, 30), centrado=True
     )
-    boton_rect = dibujar_boton(
-        juego_base["pantalla"],
+    # Usar la clase Boton en vez de dibujar_boton
+    boton = Boton(
         "¡Siguiente nivel! 👉",
         x_panel + (ancho_panel - sx(300)) // 2,
         y_panel + sy(130),
         sx(300), sy(50),
-        (100, 160, 220), (30, 60, 120), fuente_texto
+        color_normal=(100, 160, 220),
+        color_hover=(30, 60, 120),
+        fuente=fuente_texto
     )
-    carta_rects.append((boton_rect, {'id': 'siguiente'}))
+    boton.draw(pantalla)
+    carta_rects.append((boton.rect, {'id': 'siguiente'}))

@@ -158,7 +158,7 @@ class MenuPrincipal:
         w = self.pantalla.get_width() - self.sx(200)
         h = self.pantalla.get_height() - self.sy(260)
         margen = 24
-        tam_caja = 140
+        tam_caja = 160
         self.juego_rects = dibujar_caja_juegos(
             self.pantalla,
             x, y, w, h,
@@ -199,7 +199,7 @@ class MenuPrincipal:
                                 if rect.collidepoint(event.pos):
                                     print(f"Click en juego {idx}: {JUEGOS_DISPONIBLES[idx]['nombre']}")
                                     juego = JUEGOS_DISPONIBLES[idx]
-                                    juego["func"](self.pantalla, self.config)
+                                    juego["func"](self.pantalla, self.config, self.dificultad_seleccionada, self.fondo, self.navbar, self.images, self.sounds)
 
             # 1. Fondo dinámico
             #Establecemos la velocidad de actualización 
