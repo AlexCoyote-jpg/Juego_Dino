@@ -12,7 +12,7 @@ JUEGOS_DISPONIBLES = [
     {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino3"},
     {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino4"},
     {"nombre": "Juego de Sumas", "func": juego_sumas , "imagen": "dino5"},
-
+  
     
     
     # {"nombre": "Otro Juego", "func": otro_juego},

@@ -1,5 +1,5 @@
 import pygame
-
+import time
 
 
 FUENTES_CACHE = {}
@@ -212,4 +212,116 @@ def dibujar_caja_texto(pantalla, x, y, w, h, color, radius=18, texto=None, fuent
             pantalla, texto, x, y, w, h, fuente or get_default_font(), color_texto, centrado=True
         )
 
+
+def dibujar_barra_scroll(surface, x, y, w, h, scroll_pos, total_height, visible_height, color=(200, 200, 200), highlight=False):
+    """
+    Dibuja una barra de desplazamiento vertical.
+    Oculta la barra si no es necesaria.
+    Permite saltar al hacer click en la barra.
+    """
+    if total_height <= visible_height or h <= 0:
+        return None  # No necesita scroll ni barra
+
+    bar_width = 10
+    # Optimización: calcula proporción solo una vez
+    vis_ratio = visible_height / total_height
+    thumb_height = max(30, int(visible_height * vis_ratio))
+    max_scroll = total_height - visible_height
+    # Evita división por cero
+    if max_scroll == 0:
+        thumb_pos = y
+    else:
+        thumb_pos = y + int(scroll_pos * (h - thumb_height) / max_scroll)
+
+    # Fondo de la barra
+    bar_rect = pygame.Rect(x + w - bar_width, y, bar_width, h)
+    pygame.draw.rect(surface, (100, 100, 100, 100), bar_rect, border_radius=5)
+
+    # Thumb con feedback visual
+    thumb_color = (150, 180, 255) if highlight else color
+    thumb_rect = pygame.Rect(x + w - bar_width, thumb_pos, bar_width, thumb_height)
+    pygame.draw.rect(surface, thumb_color, thumb_rect, border_radius=5)
+
+    return thumb_rect  # Devuelve el rectángulo del thumb para detección de drag
+
+
+# Clase para gestionar el scroll
+class ScrollManager:
+    def __init__(self, initial_pos=0):
+        self.scroll_pos = initial_pos
+        self.target_scroll = initial_pos
+        self.last_update = time.time()
+        self.dragging = False
+        self.drag_offset = 0
+
+    def update(self, max_scroll, smooth=True):
+        current_time = time.time()
+        dt = current_time - self.last_update
+        self.last_update = current_time
+
+        if smooth:
+            diff = self.target_scroll - self.scroll_pos
+            # Optimización: solo actualiza si hay diferencia significativa
+            if abs(diff) > 0.5:
+                self.scroll_pos += diff * min(1.0, dt * 10)
+            else:
+                self.scroll_pos = self.target_scroll
+        else:
+            self.scroll_pos = self.target_scroll
+
+        self.scroll_pos = max(0, min(self.scroll_pos, max_scroll))
+        self.target_scroll = max(0, min(self.target_scroll, max_scroll))
+        return int(self.scroll_pos)
+
+    def scroll_to(self, pos):
+        self.target_scroll = pos
+
+    def scroll_by(self, delta):
+        self.target_scroll += delta
+
+    def handle_event(self, event, wheel_speed=40, thumb_rect=None, max_scroll=0, h=0, y=0, bar_rect=None):
+        """
+        Maneja eventos de rueda, drag del mouse y click en la barra para saltar.
+        """
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 4:  # Scroll hacia arriba
+                self.scroll_by(-wheel_speed)
+                return True
+            elif event.button == 5:  # Scroll hacia abajo
+                self.scroll_by(wheel_speed)
+                return True
+            elif event.button == 1:
+                # Drag del thumb
+                if thumb_rect and thumb_rect.collidepoint(event.pos):
+                    self.dragging = True
+                    self.drag_offset = event.pos[1] - thumb_rect.y
+                    return True
+                # Click en la barra fuera del thumb para saltar
+                elif bar_rect and bar_rect.collidepoint(event.pos):
+                    # Saltar el scroll al centro del thumb donde se hizo click
+                    click_y = event.pos[1]
+                    bar_top = y
+                    bar_height = h
+                    thumb_height = thumb_rect.height if thumb_rect else 30
+                    rel_y = click_y - bar_top - thumb_height // 2
+                    max_thumb_y = bar_height - thumb_height
+                    rel_y = max(0, min(rel_y, max_thumb_y))
+                    if max_scroll > 0 and bar_height > thumb_height:
+                        self.target_scroll = int(rel_y * max_scroll / (bar_height - thumb_height))
+                    return True
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:
+                self.dragging = False
+        elif event.type == pygame.MOUSEMOTION and self.dragging and thumb_rect:
+            # Calcular nueva posición de scroll basada en el movimiento del mouse
+            new_thumb_y = event.pos[1] - self.drag_offset
+            bar_height = h
+            thumb_height = thumb_rect.height
+            max_thumb_y = y + bar_height - thumb_height
+            new_thumb_y = max(y, min(new_thumb_y, max_thumb_y))
+            # Convertir posición del thumb a scroll_pos
+            if max_scroll > 0 and bar_height > thumb_height:
+                self.target_scroll = int((new_thumb_y - y) * max_scroll / (bar_height - thumb_height))
+            return True
+        return False
 

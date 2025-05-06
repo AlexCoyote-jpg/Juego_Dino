@@ -1,5 +1,4 @@
-
-# navigation_bar_optimizado.py
+# navigation_bar.py
 import pygame
 from .utils import Boton
 from .animations import get_surface
