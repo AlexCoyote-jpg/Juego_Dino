@@ -8,11 +8,11 @@ from .memoria_jurasica import iniciar_juego_memoria
 
 # Lista centralizada de juegos (opcional, para usar en el menú principal)
 JUEGOS_DISPONIBLES = [
-    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino1"},
-    {"nombre": "Juego de memorama", "func": iniciar_juego_memoria , "imagen": "dino2"},
-    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino3"},
-    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino4"},
-    {"nombre": "Juego de Sumas", "func": iniciar_juego_sumas , "imagen": "dino5"},
+    {"nombre": "Dino Sumas/Resta", "func": iniciar_juego_sumas , "imagen": "dino1"},
+    {"nombre": "Juego Cazador", "func": iniciar_juego_sumas , "imagen": "dino2"},
+    {"nombre": "Dino Logico", "func": iniciar_juego_sumas , "imagen": "dino3"},
+    {"nombre": "Memoria Jurasica", "func": iniciar_juego_memoria , "imagen": "dino4"},
+    {"nombre": "Rescate Jurasico", "func": iniciar_juego_sumas , "imagen": "dino5"},
   
     
     
