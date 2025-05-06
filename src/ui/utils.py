@@ -74,7 +74,7 @@ class Boton:
         self.color_top = color_top or (90, 180, 255)
         self.color_bottom = color_bottom or (0, 120, 255)
         self.rect = pygame.Rect(x, y, ancho, alto)
-        self.border_color = (255, 255, 255, 90) if border_color is None else border_color
+        self.border_color = (255, 255, 255, 90) if border_color is True else border_color
         self.border_width = border_width
         self._gradiente_cache = None
         self._last_hovered = None
