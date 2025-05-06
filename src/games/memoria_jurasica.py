@@ -3,6 +3,8 @@ import random
 import os
 from games.cards import dibujar_carta_generica
 from games.victory import mostrar_victoria
+from ui.utils import Boton_Images
+from core.game_state import JuegoBase
 
 IMG_PATH = os.path.join("assets", "imagenes")
 SND_PATH = os.path.join("assets", "sonidos")
@@ -18,237 +20,328 @@ def cargar_sonido(nombre):
     ruta = os.path.join(SND_PATH, nombre)
     return pygame.mixer.Sound(ruta)
 
-def generar_operaciones(nivel, num_pares):
-    operaciones = []
-    resultados_usados = set()
-    while len(operaciones) < num_pares:
-        if nivel == "Básico":
-            a, b = random.randint(1, 9), random.randint(1, 9)
-            op = f"{a} + {b}"
-            res = a + b
-        elif nivel == "Medio":
-            a, b = random.randint(2, 9), random.randint(2, 9)
-            op = f"{a} × {b}"
-            res = a * b
-        else:
-            tipo = random.choice(['suma', 'resta', 'mult', 'div'])
-            if tipo == 'suma':
-                a, b = random.randint(10, 30), random.randint(1, 10)
+class JuegoMemoriaJurasica(JuegoBase):
+    DIFICULTAD_CONFIG = {
+        "Fácil":   {"nivel": "Básico",   "pares": 6,  "filas": 3, "columnas": 4},
+        "Normal":  {"nivel": "Medio",    "pares": 8,  "filas": 4, "columnas": 4},
+        "Difícil": {"nivel": "Avanzado", "pares": 10, "filas": 4, "columnas": 5},
+    }
+
+    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds,return_to_menu=None):
+        super().__init__('Memoria Jurasica', pantalla, config, dificultad, fondo, navbar, images, sounds,return_to_menu)
+        self.pantalla = pantalla
+        self.config = config
+        self.fondo = fondo
+        self.navbar = navbar
+        self.images = images
+        self.sounds = sounds
+
+        # Fuentes y colores
+        self.font = pygame.font.SysFont("Segoe UI", 34, bold=True)
+        self.font_small = pygame.font.SysFont("Segoe UI", 22)
+        self.color_fondo = (245, 240, 230)
+        self.color_titulo = (80, 0, 80)
+        self.color_info = (30, 30, 30)
+
+        # Dificultad y nivel
+        self.dificultad_seleccionada = dificultad
+        self.set_dificultad(dificultad)
+
+        # Recursos gráficos y de sonido
+        self.reverso = images.get("card_back") or cargar_imagen("card_back.png", (100, 120))
+        self.sonido_acierto = sounds.get("acierto") if sounds else cargar_sonido("acierto.wav")
+        self.sonido_error = sounds.get("error") if sounds else cargar_sonido("error.wav")
+        self.img_sonido_encendido = images.get("encendido") or cargar_imagen("encendido.png", (40, 40))
+        self.img_sonido_apagado = images.get("apagado") or cargar_imagen("apagado.png", (40, 40))
+        self.silenciado = False
+        self.btn_silencio_rect = None
+
+        # Estado del juego
+        self.inicializar_estado()
+        self.running = True
+
+    def set_dificultad(self, dificultad):
+        config = self.DIFICULTAD_CONFIG.get(dificultad, self.DIFICULTAD_CONFIG["Fácil"])
+        self.nivel_actual = config["nivel"]
+        self.num_pares = config["pares"]
+        self.filas = config["filas"]
+        self.columnas = config["columnas"]
+
+    def inicializar_estado(self):
+        self.cartas = []
+        self.cartas_emparejadas = set()
+        self.carta_primera = None
+        self.carta_segunda = None
+        self.pares_encontrados = 0
+        self.total_pares = self.num_pares
+        self.nivel_completado = False
+        self.carta_rects = []
+        self.mostrar_cartas_inicio = True
+        self.tiempo_inicio_mostrar = pygame.time.get_ticks()
+        self.tiempo_espera = 0
+        self.procesando_par = False
+        self.mensaje = ""
+        self.tiempo_mensaje = 0
+        self.generar_cartas()
+
+    def cambiar_nivel(self, nueva_dificultad=None):
+        if nueva_dificultad and nueva_dificultad in self.DIFICULTAD_CONFIG:
+            self.dificultad_seleccionada = nueva_dificultad
+        self.set_dificultad(self.dificultad_seleccionada)
+        self.inicializar_estado()
+
+    def generar_cartas(self):
+        operaciones = self.generar_operaciones(self.nivel_actual, self.num_pares)
+        self.cartas = []
+        for i, (op, res) in enumerate(operaciones):
+            self.cartas.append({
+                'id': i,
+                'tipo': 'operacion',
+                'valor': op,
+                'pareja_id': i + self.num_pares,
+                'volteada': True,
+                'bordes': None
+            })
+            self.cartas.append({
+                'id': i + self.num_pares,
+                'tipo': 'resultado',
+                'valor': str(res),
+                'pareja_id': i,
+                'volteada': True,
+                'bordes': None
+            })
+        random.shuffle(self.cartas)
+
+    def generar_operaciones(self, nivel, num_pares):
+        operaciones = []
+        resultados_usados = set()
+        while len(operaciones) < num_pares:
+            if nivel == "Básico":
+                a, b = random.randint(1, 10), random.randint(1, 10)
                 op = f"{a} + {b}"
                 res = a + b
-            elif tipo == 'resta':
-                a, b = random.randint(10, 30), random.randint(1, 10)
-                op = f"{a} - {b}"
-                res = a - b
-            elif tipo == 'mult':
-                a, b = random.randint(2, 12), random.randint(2, 12)
+            elif nivel == "Medio":
+                a, b = random.randint(2, 10), random.randint(2, 10)
                 op = f"{a} × {b}"
                 res = a * b
-            else:
-                b = random.randint(2, 10)
-                a = b * random.randint(2, 10)
-                op = f"{a} ÷ {b}"
-                res = a // b
-        if res not in resultados_usados:
-            resultados_usados.add(res)
-            operaciones.append((op, res))
-    return operaciones
+            else:  # Avanzado
+                tipo = random.choice(['suma', 'resta', 'mult', 'div'])
+                if tipo == 'suma':
+                    a, b = random.randint(10, 50), random.randint(10, 50)
+                    op = f"{a} + {b}"
+                    res = a + b
+                elif tipo == 'resta':
+                    a, b = random.randint(20, 60), random.randint(10, 30)
+                    op = f"{a} - {b}"
+                    res = a - b
+                elif tipo == 'mult':
+                    a, b = random.randint(3, 12), random.randint(3, 12)
+                    op = f"{a} × {b}"
+                    res = a * b
+                else:  # División exacta
+                    b = random.randint(2, 10)
+                    res = random.randint(2, 10)
+                    a = b * res
+                    op = f"{a} ÷ {b}"
+            if res not in resultados_usados:
+                resultados_usados.add(res)
+                operaciones.append((op, res))
+        return operaciones
 
-def iniciar_juego_memoria(pantalla, config, dificultad, fondo, navbar, images, sounds):
-    pygame.font.init()
-    reloj = pygame.time.Clock()
-    font = pygame.font.SysFont("Segoe UI", 32, bold=True)
-    font_small = pygame.font.SysFont("Segoe UI", 24)
-    running = True
-
-    # Recursos
-    reverso = images.get("card_back") or cargar_imagen("card_back.png", (100, 120))
-    sonido_acierto = sounds.get("acierto") if sounds else cargar_sonido("acierto.wav")
-    sonido_error = sounds.get("error") if sounds else cargar_sonido("error.wav")
-    img_sonido_encendido = images.get("encendido") or cargar_imagen("encendido.png", (40, 40))
-    img_sonido_apagado = images.get("apagado") or cargar_imagen("apagado.png", (40, 40))
-    silenciado = False
-    btn_silencio_rect = None
-
-    # Lógica de nivel
-    nivel = "Básico" if dificultad == "Fácil" else "Medio" if dificultad == "Normal" else "Avanzado"
-    num_pares = 6 if nivel == "Básico" else 8 if nivel == "Medio" else 10
-    operaciones = generar_operaciones(nivel, num_pares)
-
-    cartas = []
-    for i, (op, res) in enumerate(operaciones):
-        cartas.append({
-            'id': i,
-            'tipo': 'operacion',
-            'valor': op,
-            'pareja_id': i + num_pares,
-            'volteada': True,
-            'bordes': None
-        })
-        cartas.append({
-            'id': i + num_pares,
-            'tipo': 'resultado',
-            'valor': str(res),
-            'pareja_id': i,
-            'volteada': True,
-            'bordes': None
-        })
-    random.shuffle(cartas)
-    cartas_emparejadas = set()
-    carta_primera = None
-    carta_segunda = None
-    pares_encontrados = 0
-    total_pares = num_pares
-    nivel_completado = False
-    carta_rects = []
-    mostrar_cartas_inicio = True
-    tiempo_inicio_mostrar = pygame.time.get_ticks()
-    tiempo_espera = 0
-    procesando_par = False
-    mensaje = ""
-    tiempo_mensaje = 0
-
-    while running:
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
+    def handle_event(self, event):
+        if event.type == pygame.QUIT:
+            self.running = False
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            if self.return_to_menu:
+                self.return_to_menu()
+        elif event.type == pygame.VIDEORESIZE:
+            self.pantalla = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+            if hasattr(self.fondo, "resize"):
+                self.fondo.resize(event.w, event.h)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if self.btn_silencio_rect and self.btn_silencio_rect.collidepoint(event.pos):
+                self.silenciado = not self.silenciado
+                volumen = 0.0 if self.silenciado else 1.0
+                if self.sonido_acierto:
+                    self.sonido_acierto.set_volume(volumen)
+                if self.sonido_error:
+                    self.sonido_error.set_volume(volumen)
                 return
-            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+            if self.nivel_completado:
+                for rect, carta in self.carta_rects:
+                    if rect.collidepoint(event.pos) and isinstance(carta, dict) and carta.get('id') == 'siguiente':
+                        self.cambiar_nivel()
+                        return
+            if self.mostrar_cartas_inicio or self.procesando_par or self.nivel_completado:
                 return
-            elif evento.type == pygame.VIDEORESIZE:
-                pantalla = pygame.display.set_mode((evento.w, evento.h), pygame.RESIZABLE)
-                # Redibuja el fondo y ajusta elementos si es necesario
-            elif evento.type == pygame.MOUSEBUTTONDOWN:
-                # Botón de silenciar
-                if btn_silencio_rect and btn_silencio_rect.collidepoint(evento.pos):
-                    silenciado = not silenciado
-                    volumen = 0.0 if silenciado else 1.0
-                    if sonido_acierto:
-                        sonido_acierto.set_volume(volumen)
-                    if sonido_error:
-                        sonido_error.set_volume(volumen)
-                    continue
-                # Lógica de cartas
-                if nivel_completado:
-                    for rect, carta in carta_rects:
-                        if rect.collidepoint(evento.pos) and isinstance(carta, dict) and carta.get('id') == 'siguiente':
-                            return  # Sale y vuelve al menú principal
-                if mostrar_cartas_inicio or procesando_par or nivel_completado:
-                    continue
-                for rect, carta in carta_rects:
-                    if rect.collidepoint(evento.pos):
-                        if carta['id'] in cartas_emparejadas or carta.get('volteada'):
-                            continue
-                        carta['volteada'] = True
-                        if not carta_primera:
-                            carta_primera = carta
-                        elif not carta_segunda and carta_primera['id'] != carta['id']:
-                            carta_segunda = carta
-                            procesando_par = True
-                            tiempo_espera = pygame.time.get_ticks()
-                        break
+            for rect, carta in self.carta_rects:
+                if rect.collidepoint(event.pos):
+                    if carta['id'] in self.cartas_emparejadas or carta.get('volteada'):
+                        continue
+                    carta['volteada'] = True
+                    if not self.carta_primera:
+                        self.carta_primera = carta
+                    elif not self.carta_segunda and self.carta_primera['id'] != carta['id']:
+                        self.carta_segunda = carta
+                        self.procesando_par = True
+                        self.tiempo_espera = pygame.time.get_ticks()
+                    break
 
-        # Lógica de mostrar cartas al inicio
-        if mostrar_cartas_inicio:
-            if pygame.time.get_ticks() - tiempo_inicio_mostrar > 2000:
-                for carta in cartas:
-                    if carta['id'] not in cartas_emparejadas:
+    def update(self, dt=0):
+        self.actualizar_logica()
+
+    def actualizar_logica(self):
+        if self.mostrar_cartas_inicio:
+            if pygame.time.get_ticks() - self.tiempo_inicio_mostrar > 1500:
+                for carta in self.cartas:
+                    if carta['id'] not in self.cartas_emparejadas:
                         carta['volteada'] = False
-                mostrar_cartas_inicio = False
+                self.mostrar_cartas_inicio = False
 
-        # Lógica de emparejamiento
-        if procesando_par and carta_primera and carta_segunda:
-            if pygame.time.get_ticks() - tiempo_espera > 700:
-                if carta_primera['pareja_id'] == carta_segunda['id']:
-                    cartas_emparejadas.add(carta_primera['id'])
-                    cartas_emparejadas.add(carta_segunda['id'])
-                    pares_encontrados += 1
-                    carta_primera['bordes'] = 'acierto'
-                    carta_segunda['bordes'] = 'acierto'
-                    if sonido_acierto:
-                        sonido_acierto.play()
-                    mensaje = "¡Correcto!"
+        if self.procesando_par and self.carta_primera and self.carta_segunda:
+            if pygame.time.get_ticks() - self.tiempo_espera > 600:
+                if self.carta_primera['pareja_id'] == self.carta_segunda['id']:
+                    self.cartas_emparejadas.add(self.carta_primera['id'])
+                    self.cartas_emparejadas.add(self.carta_segunda['id'])
+                    self.pares_encontrados += 1
+                    self.carta_primera['bordes'] = 'acierto'
+                    self.carta_segunda['bordes'] = 'acierto'
+                    if self.sonido_acierto and not self.silenciado:
+                        self.sonido_acierto.play()
+                    self.mensaje = "¡Correcto!"
                 else:
-                    carta_primera['bordes'] = 'error'
-                    carta_segunda['bordes'] = 'error'
-                    if sonido_error:
-                        sonido_error.play()
-                    mensaje = "Intenta de nuevo"
-                    carta_primera['volteada'] = False
-                    carta_segunda['volteada'] = False
-                carta_primera = None
-                carta_segunda = None
-                procesando_par = False
-                tiempo_mensaje = pygame.time.get_ticks()
-                if pares_encontrados >= total_pares:
-                    nivel_completado = True
+                    self.carta_primera['bordes'] = 'error'
+                    self.carta_segunda['bordes'] = 'error'
+                    if self.sonido_error and not self.silenciado:
+                        self.sonido_error.play()
+                    self.mensaje = "Intenta de nuevo"
+                    self.carta_primera['volteada'] = False
+                    self.carta_segunda['volteada'] = False
+                self.carta_primera = None
+                self.carta_segunda = None
+                self.procesando_par = False
+                self.tiempo_mensaje = pygame.time.get_ticks()
+                if self.pares_encontrados >= self.total_pares:
+                    self.nivel_completado = True
 
-        # Dibujar fondo y navbar
-        fondo.update(1)
-        fondo.draw(pantalla)
-        navbar.draw(pantalla, config.get("logo", None))
+    def dibujar(self):
+        self.fondo.update(1)
+        self.fondo.draw(self.pantalla)
+        self.logo = self.images.get("dino4")
 
-        # Título
-        txt = font.render(f"Memoria Jurásica - {nivel}", True, (80, 0, 80))
-        pantalla.blit(txt, (pantalla.get_width() // 2 - txt.get_width() // 2, 40))
+        navbar_height = self.navbar.height if hasattr(self.navbar, "height") else 60
+        info_top = navbar_height + 10
 
-        # Info
-        txt_info = font_small.render(f"Pares: {pares_encontrados}/{total_pares}", True, (30, 30, 30))
-        pantalla.blit(txt_info, (pantalla.get_width() // 2 - txt_info.get_width() // 2, 90))
+        # --- Fondo info y título debajo de la barra ---
+        info_height = 70
+        pygame.draw.rect(
+            self.pantalla, (255, 255, 255, 180),
+            (20, info_top, self.pantalla.get_width() - 40, info_height),
+            border_radius=18
+        )
+        txt = self.font.render(f"Memoria Jurásica - {self.nivel_actual}", True, self.color_titulo)
+        self.pantalla.blit(
+            txt,
+            (self.pantalla.get_width() // 2 - txt.get_width() // 2, info_top + 8)
+        )
 
-        # Calcular cuadrícula
-        num = len(cartas)
-        if num <= 12:
-            filas, columnas = 3, 4
-        elif num <= 16:
-            filas, columnas = 4, 4
-        else:
-            filas, columnas = 4, 5
-        base_ancho, base_alto = 100, 120
-        espacio_h, espacio_v = 24, 24
+        txt_info = self.font_small.render(
+            f"Pares: {self.pares_encontrados}/{self.total_pares}", True, self.color_info
+        )
+        self.pantalla.blit(
+            txt_info,
+            (self.pantalla.get_width() // 2 - txt_info.get_width() // 2, info_top + 40)
+        )
+
+        # --- Calcular cuadrícula adaptativa ---
+        num = len(self.cartas)
+        filas, columnas = self.filas, self.columnas
+        base_ancho, base_alto = 90, 110
+        espacio_h, espacio_v = 18, 18
+
+        # Espacio disponible debajo de la barra y título
+        margen_lateral = 40
+        margen_superior = info_top + info_height + 10
+        margen_inferior = 80
+
+        area_w = self.pantalla.get_width() - 2 * margen_lateral
+        area_h = self.pantalla.get_height() - margen_superior - margen_inferior
+
         total_ancho = columnas * base_ancho + (columnas - 1) * espacio_h
         total_alto = filas * base_alto + (filas - 1) * espacio_v
-        inicio_x = (pantalla.get_width() - total_ancho) // 2
-        inicio_y = 140
 
-        # Dibujar cartas
-        carta_rects = []
-        for i, carta in enumerate(cartas):
+        factor = min(
+            area_w / total_ancho,
+            area_h / total_alto,
+            1.0
+        )
+        card_w = int(base_ancho * factor)
+        card_h = int(base_alto * factor)
+        espacio_h = int(espacio_h * factor)
+        espacio_v = int(espacio_v * factor)
+        total_ancho = columnas * card_w + (columnas - 1) * espacio_h
+        total_alto = filas * card_h + (filas - 1) * espacio_v
+
+        inicio_x = (self.pantalla.get_width() - total_ancho) // 2
+        inicio_y = margen_superior + (area_h - total_alto) // 2
+
+        # --- Dibujar cartas ---
+        self.carta_rects = []
+        for i, carta in enumerate(self.cartas):
             fila = i // columnas
             columna = i % columnas
-            x = inicio_x + columna * (base_ancho + espacio_h)
-            y = inicio_y + fila * (base_alto + espacio_v)
+            x = inicio_x + columna * (card_w + espacio_h)
+            y = inicio_y + fila * (card_h + espacio_v)
             rect = dibujar_carta_generica(
-                pantalla, {**carta, "cartas_emparejadas": cartas_emparejadas},
-                x, y, base_ancho, base_alto, font_small,
+                self.pantalla, {**carta, "cartas_emparejadas": self.cartas_emparejadas},
+                x, y, card_w, card_h, self.font_small,
                 (255, 255, 255), (0, 180, 0), (180, 0, 0), (0, 0, 120),
-                reverso, (80, 80, 80)
+                self.reverso, (80, 80, 80)
             )
-            carta_rects.append((rect, carta))
+            self.carta_rects.append((rect, carta))
 
-        # Mensaje temporal
-        if mensaje and pygame.time.get_ticks() - tiempo_mensaje < 1200:
-            txt_msg = font_small.render(mensaje, True, (0, 120, 0))
-            pantalla.blit(txt_msg, (pantalla.get_width() // 2 - txt_msg.get_width() // 2, 120))
-        elif mensaje:
-            mensaje = ""
+        # --- Mensaje temporal ---
+        if self.mensaje and pygame.time.get_ticks() - self.tiempo_mensaje < 1200:
+            txt_msg = self.font_small.render(self.mensaje, True, (0, 120, 0))
+            self.pantalla.blit(
+                txt_msg,
+                (self.pantalla.get_width() // 2 - txt_msg.get_width() // 2, info_top + info_height + 10)
+            )
+        elif self.mensaje:
+            self.mensaje = ""
 
-        # Victoria
-        if nivel_completado:
+        # --- Victoria ---
+        if self.nivel_completado:
             mostrar_victoria(
-                pantalla,
-                lambda v: v, lambda v: v, pantalla.get_width(), pantalla.get_height(),
-                font, font_small,
-                {"pantalla": pantalla}, carta_rects
+                self.pantalla,
+                lambda v: v, lambda v: v, self.pantalla.get_width(), self.pantalla.get_height(),
+                self.font, self.font_small,
+                {"pantalla": self.pantalla}, self.carta_rects
             )
 
-        # Dibujar botón de silenciar (esquina inferior derecha, SIEMPRE visible y encima de todo)
-        icono = img_sonido_apagado if silenciado else img_sonido_encendido
-        x_btn = pantalla.get_width() - 60
-        y_btn = pantalla.get_height() - 60
-        btn_silencio_rect = pygame.Rect(x_btn, y_btn, 40, 40)
-        # Fondo circular para mejor visibilidad
-        pygame.draw.circle(pantalla, (240, 240, 240, 220), (x_btn + 20, y_btn + 20), 24)
-        pantalla.blit(icono, (x_btn, y_btn))
+        # --- Botón de silenciar ---
+        img_size = 32
+        btn_size = 40
+        margin = 12
+        x_btn = self.pantalla.get_width() - btn_size - margin
+        y_btn = self.pantalla.get_height() - btn_size - margin
+        icono = self.img_sonido_apagado if self.silenciado else self.img_sonido_encendido
+        if icono.get_width() != img_size or icono.get_height() != img_size:
+            icono = pygame.transform.smoothscale(icono, (img_size, img_size))
+        btn_silencio = Boton_Images(
+            "", x_btn, y_btn, btn_size, btn_size,
+            imagen=icono,
+            imagen_pos="center",
+            estilo="round",
+            border_color=(255, 0, 0) if self.silenciado else None,
+            border_width=3,
+            color_normal=(240, 240, 240),
+            color_hover=(255, 220, 220)
+        )
+        btn_silencio.draw(self.pantalla)
+        self.btn_silencio_rect = btn_silencio.rect
 
-        pygame.display.flip()
-        reloj.tick(60)
+    def draw(self, surface=None):
+        pantalla = surface if surface else self.pantalla
+        self.pantalla = pantalla  # Para mantener consistencia interna
+        self.dibujar()

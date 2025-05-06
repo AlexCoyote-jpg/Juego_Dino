@@ -8,11 +8,12 @@ from ui.navigation_bar import NavigationBar
 from ui.animations import animar_dinos, dibujar_caja_juegos
 from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
 from ui.Emojis import mostrar_alternativo_adaptativo
-from core.game_state import create_juego_base, manejar_transicion
+from core.game_state import *
 from games import JUEGOS_DISPONIBLES
+from ui.screen_manager import create_screen_manager, set_screen, update_screen, draw_screen, HomeScreen, JuegosScreen, ChatBotScreen, handle_event_screen, get_screen
 
 class MenuPrincipal:
-    def __init__(self, pantalla, fondo, images, sounds, config):
+    def __init__(self, pantalla, fondo, images, sounds, config, screen_manager):
         # --- Inicialización de pantalla y dimensiones base ---
         self.pantalla = pantalla
         self.base_width = pantalla.get_width()
@@ -38,14 +39,11 @@ class MenuPrincipal:
         self.font_titulo = pygame.font.SysFont("Segoe UI", 54, bold=True)
         self.font_texto = pygame.font.SysFont("Segoe UI", 28)
 
-        # --- Estado de dificultad seleccionada ---
-        self.dificultad_seleccionada = "Fácil"
-
-        # --- Estado y lógica del juego base ---
-        self.juego_base = create_juego_base(pantalla, pantalla.get_width(), pantalla.get_height())
-
         # --- Reloj para control de FPS ---
         self.clock = pygame.time.Clock()
+
+        # --- Screen manager ---
+        self.screen_manager = screen_manager
 
     def sx(self, x):
         return int(x * self.pantalla.get_width() / self.base_width)
@@ -142,6 +140,8 @@ class MenuPrincipal:
     def mostrar_juegos(self, dificultad):
         x_t, y_t, w_t, h_t = self.sx(130), self.sy(110), self.sx(640), self.sy(60)
         dibujar_caja_texto(self.pantalla, x_t, y_t, w_t, h_t, (70, 130, 180))
+        # --- Estado de dificultad seleccionada ---
+        self.dificultad_seleccionada = dificultad
         mostrar_texto_adaptativo(
             self.pantalla,
             f"Juegos de nivel {dificultad}",
@@ -176,52 +176,78 @@ class MenuPrincipal:
     def run(self):
         running = True
         last_time = time.time()
+        set_screen(self.screen_manager, HomeScreen(self))
+        Fps = 60
+
+        juego_activo = None  # Para saber si hay un juego abierto
+
         while running:
             now = time.time()
             dt = now - last_time
             last_time = now
 
-            for event in pygame.event.get():
+            eventos = pygame.event.get()
+            for event in eventos:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.VIDEORESIZE:
                     self.base_width, ALTO = event.w, event.h
                     self.pantalla = pygame.display.set_mode((self.base_width, ALTO), pygame.RESIZABLE)
                     self.fondo.resize(self.base_width, ALTO)
-                elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                    nav_result = self.navbar.handle_event(event, self.logo)
-                    if nav_result is not None:
-                        self.juego_base["nivel_actual"] = self.niveles[nav_result]
-                    # Solo procesa el click si el evento es de mouse y tiene 'pos'
-                    if event.type == pygame.MOUSEBUTTONDOWN and hasattr(event, "pos"):
-                        if hasattr(self, "juego_rects"):
-                            for idx, rect in enumerate(self.juego_rects):
-                                if rect.collidepoint(event.pos):
-                                    print(f"Click en juego {idx}: {JUEGOS_DISPONIBLES[idx]['nombre']}")
-                                    juego = JUEGOS_DISPONIBLES[idx]
-                                    juego["func"](self.pantalla, self.config, self.dificultad_seleccionada, self.fondo, self.navbar, self.images, self.sounds)
+                nav_result = self.navbar.handle_event(event, self.logo)
+                if nav_result is not None:
+                    vista = self.niveles[nav_result]
+                    if vista == "Home":
+                        set_screen(self.screen_manager, HomeScreen(self))
+                    elif vista in ("Fácil", "Normal", "Difícil"):
+                        set_screen(self.screen_manager, JuegosScreen(self, vista))
+                    elif vista == "ChatBot":
+                        set_screen(self.screen_manager, ChatBotScreen(self))
 
-            # 1. Fondo dinámico
-            #Establecemos la velocidad de actualización 
-            Fps = 60
-            self.fondo.update(dt * Fps)  # Multiplica por 60 para mantener velocidad similar
-            # Redibujar el fondo y las estrellas
+                # --- Detectar click sobre un juego en la grilla SOLO si está activa la pantalla de juegos ---
+                screen_actual = get_screen(self.screen_manager)
+                if (
+                    isinstance(screen_actual, JuegosScreen)
+                    and hasattr(self, "juego_rects") and self.juego_rects
+                ):
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        mouse_pos = event.pos
+                        for idx, rect in enumerate(self.juego_rects):
+                            if rect.collidepoint(mouse_pos):
+                                juego_info = JUEGOS_DISPONIBLES[idx]
+                                clase_juego = juego_info.get("clase")
+                                if clase_juego is not None:
+                                    dificultad = getattr(self, "dificultad_seleccionada", "Normal")
+                                    def volver():
+                                        set_screen(self.screen_manager, JuegosScreen(self, dificultad))
+                                    instancia = clase_juego(
+                                        self.pantalla, self.config, dificultad,
+                                        self.fondo, self.navbar, self.images, self.sounds,
+                                        return_to_menu=volver
+                                    )
+                                    set_screen(self.screen_manager, instancia)
+                                break
+
+            # Delegar todos los eventos al screen activo (incluye juegos)
+            handle_event_screen(self.screen_manager, eventos)
+
+            # Fondo dinámico
+            self.fondo.update(dt * Fps)
             self.fondo.draw(self.pantalla)
-            # 2. Elementos de la pantalla según selección
-            nivel = self.juego_base["nivel_actual"]
-            if nivel == "Home":
-                self.mostrar_home()
-            elif nivel in ("Fácil", "Normal", "Difícil"):
-                self.mostrar_juegos(nivel)
-            elif nivel == "ChatBot":
-                self.mostrar_chatbot()
-            # 3. Barra de navegación con logo (siempre encima de todo)
+            # Actualizar y dibujar el screen activo
+            update_screen(self.screen_manager, dt)
+            draw_screen(self.screen_manager, self.pantalla)
+            # Barra de navegación con logo
             self.navbar.draw(self.pantalla, self.logo)
-            # 4. Transición visual si aplica
-            manejar_transicion(self.juego_base)
+
             pygame.display.flip()
             self.clock.tick(Fps)
 
 def run_menu_principal(pantalla, fondo, images, sounds, config):
-    menu = MenuPrincipal(pantalla, fondo, images, sounds, config)
+    # Crear el screen manager
+    screen_manager = create_screen_manager()
+
+    # Al iniciar el menú principal
+    menu = MenuPrincipal(pantalla, fondo, images, sounds, config, screen_manager)
+    set_screen(screen_manager, menu)
     menu.run()

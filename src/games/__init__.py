@@ -2,21 +2,20 @@
 # En __init__:
 # Permite que la carpeta sea reconocida como un módulo de Python
 
-from .juego_ejemplo import iniciar_juego_sumas
-from .memoria_jurasica import iniciar_juego_memoria
-# from .otro_juego import otro_juego  # Descomenta y agrega más juegos aquí
+from .dino_suma_resta import JuegoBase
+from .memoria_jurasica import JuegoMemoriaJurasica
+from .mi_juego import MiJuego
+# from .otro_juego import OtroJuego  # Descomenta y agrega más juegos aquí
 
 # Lista centralizada de juegos (opcional, para usar en el menú principal)
 JUEGOS_DISPONIBLES = [
-    {"nombre": "Dino Sumas/Resta", "func": iniciar_juego_sumas , "imagen": "dino1"},
-    {"nombre": "Juego Cazador", "func": iniciar_juego_sumas , "imagen": "dino2"},
-    {"nombre": "Dino Logico", "func": iniciar_juego_sumas , "imagen": "dino3"},
-    {"nombre": "Memoria Jurasica", "func": iniciar_juego_memoria , "imagen": "dino4"},
-    {"nombre": "Rescate Jurasico", "func": iniciar_juego_sumas , "imagen": "dino5"},
-  
+    {"nombre": "Dino Sumas/Resta", "clase": JuegoBase, "imagen": "dino1"},
+    {"nombre": "Dino Cazador", "clase": JuegoBase, "imagen": "dino2"},
+    {"nombre": "Dino Logico", "clase": JuegoBase, "imagen": "dino3"},
+    {"nombre": "Memoria Jurasica", "clase": JuegoMemoriaJurasica, "imagen": "dino4"},
+    {"nombre": "Mi Juego", "clase": MiJuego, "imagen": "dino5"},
     
-    
-    # {"nombre": "Otro Juego", "func": otro_juego},
+    # {"nombre": "Otro Juego", "func": OtroJuego},
 ]
 
 # Ejemplo de cómo podrías usarlo en el menú principal
