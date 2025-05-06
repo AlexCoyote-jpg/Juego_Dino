@@ -41,8 +41,8 @@ def generar_opciones(respuesta):
     return opciones
 
 class JuegoSumaResta(JuegoBase):
-    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds):
-        super().__init__('Dino Suma y Resta', pantalla, config, dificultad, fondo, navbar, images, sounds)
+    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu=None):
+        super().__init__('Dino Suma y Resta', pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
         self.nivel_actual = self._nivel_from_dificultad(dificultad)
         self.puntuacion = 0
         self.jugadas_totales = 0
@@ -136,7 +136,10 @@ class JuegoSumaResta(JuegoBase):
             20, self.ALTO - 50, 180, 40, self.fuente_texto, (255,255,255), centrado=True
         )
 
-    def manejar_eventos_juego(self, evento):
+    def handle_event(self, evento):
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+            if self.return_to_menu:
+                self.return_to_menu()
         if evento.type == pygame.MOUSEBUTTONDOWN:
             for i, rect in enumerate(self.opciones_rects):
                 if rect.collidepoint(evento.pos):
@@ -153,6 +156,15 @@ class JuegoSumaResta(JuegoBase):
     def mostrar_mensaje_temporal(self, mensaje, tiempo=60):
         self.mensaje = mensaje
         self.tiempo_mensaje = tiempo
+    
+    def update(self, dt=0):
+        # Aquí puedes poner lógica de actualización si lo necesitas
+        pass
+
+    def draw(self, surface=None):
+        pantalla = surface if surface else self.pantalla
+        self.pantalla = pantalla  # Para mantener consistencia interna
+        self.dibujar_pantalla_juego()
 
     # El método ejecutar y el resto de la integración ya la tienes en tu sistema base
 

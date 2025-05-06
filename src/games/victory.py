@@ -3,6 +3,7 @@ Pantalla de victoria y botón para avanzar de nivel.
 """
 import pygame
 from ui.utils import mostrar_texto_adaptativo, Boton
+from ui.Emojis import mostrar_alternativo_adaptativo
 
 def mostrar_victoria(
     pantalla, sx, sy, ancho, alto, fuente_titulo, fuente_texto, juego_base, carta_rects,
@@ -21,25 +22,26 @@ def mostrar_victoria(
         pygame.draw.line(panel, (r, g, b, 240), (0, i), (ancho_panel, i))
     pantalla.blit(panel, (x_panel, y_panel))
     pygame.draw.rect(pantalla, color_borde, (x_panel, y_panel, ancho_panel, alto_panel), 4, border_radius=20)
-    mostrar_texto_adaptativo(
+    mostrar_alternativo_adaptativo(
         pantalla, "¡FELICIDADES! 🎉",
         x_panel, y_panel + sy(20), ancho_panel, sy(60),
         fuente_titulo, (100, 160, 220), centrado=True
     )
     mostrar_texto_adaptativo(
-        pantalla, "¡Has completado el nivel!",
+        pantalla, "¡Has completado el memorama!",
         x_panel, y_panel + sy(80), ancho_panel, sy(40),
         fuente_texto, (30, 30, 30), centrado=True
     )
     # Usar la clase Boton en vez de dibujar_boton
     boton = Boton(
-        "¡Siguiente nivel! 👉",
+        "¡Reiniciar! 🔄",
         x_panel + (ancho_panel - sx(300)) // 2,
         y_panel + sy(130),
         sx(300), sy(50),
         color_normal=(100, 160, 220),
         color_hover=(30, 60, 120),
-        fuente=fuente_texto
+        fuente= pygame.font.SysFont("Segoe Emoji", 28),
+        texto_adaptativo=True  # Esto permite que el botón use mostrar_texto_adaptativo, pero NO garantiza emojis.
     )
     boton.draw(pantalla)
     carta_rects.append((boton.rect, {'id': 'siguiente'}))
