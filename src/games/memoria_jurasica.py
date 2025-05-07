@@ -4,7 +4,7 @@ import os
 from games.cards import dibujar_carta_generica
 from games.victory import mostrar_victoria
 from ui.utils import Boton_Images
-from core.game_state import JuegoBase
+from core.juego_base import JuegoBase
 
 IMG_PATH = os.path.join("assets", "imagenes")
 SND_PATH = os.path.join("assets", "sonidos")

@@ -3,7 +3,7 @@ import random
 import sys
 from ui.utils import Boton, dibujar_caja_texto, mostrar_texto_adaptativo
 from ui.navigation_bar import NavigationBar
-from core.game_state import JuegoBase
+from core.juego_base import JuegoBase
 
 # Colores para botones de opciones
 VERDE_OPCIONES = (180, 240, 180)
