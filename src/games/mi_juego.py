@@ -1,23 +1,24 @@
-# src/games/mi_juego.py
-from core.game_state import JuegoBase
 import pygame
+from core.juego_base import JuegoBase
 
 class MiJuego(JuegoBase):
-    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu=None):
-        super().__init__('MiJuego', pantalla, config, dificultad, fondo, navbar, images, sounds)
-        self.return_to_menu = return_to_menu
+    def __init__(self, *args, **kwargs):
+        super().__init__(nombre="Círculo Central")
+        self.circulo_color = (0, 120, 255)
+        self.circulo_radio = 60
 
-    def update(self):
+    def update(self, dt=None):
+        # Aquí podrías actualizar la lógica del juego
         pass
 
-    def draw(self, surface=None):
-        pantalla = surface if surface else self.pantalla
-        pantalla.fill((200, 220, 255))  # Color de fondo visible
-        self.mostrar_texto("¡Hola desde MiJuego!", self.ANCHO // 2, self.ALTO // 2, centrado=True)
+    def draw(self, surface):
+        self.pantalla = surface  # Asegura que self.pantalla no sea None
+        self.dibujar_fondo()
+        # Dibuja un círculo centrado
+        centro = (self.ANCHO // 2, self.ALTO // 2)
+        pygame.draw.circle(surface, self.circulo_color, centro, self.circulo_radio)
+        self.mostrar_texto("Redimensiona la ventana", self.ANCHO // 2, 40, self.fuente_titulo, centrado=True)
 
-    def handle_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if self.return_to_menu:
-                self.return_to_menu()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
-            print("Opción 1 seleccionada")
+    def on_resize(self, ancho, alto):
+        # El círculo siempre se mantiene centrado, así que no es necesario hacer nada extra aquí
+        pass

@@ -41,7 +41,19 @@ class JuegoBase:
             self.mostrar_texto(linea, x, y + i * 36, fuente, centrado)
 
     def handle_event(self, evento):
+        # Maneja el redimensionamiento de la ventana
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+            if self.return_to_menu:
+                self.return_to_menu()
+        if evento.type == pygame.VIDEORESIZE:
+            self.ANCHO, self.ALTO = evento.w, evento.h
+            self.pantalla = pygame.display.set_mode((self.ANCHO, self.ALTO), pygame.RESIZABLE)
+            self.on_resize(self.ANCHO, self.ALTO)
         # Para ser sobrescrito por cada juego
+        pass
+
+    def on_resize(self, ancho, alto):
+        # Método opcional para que los juegos hijos ajusten elementos al redimensionar
         pass
 
     def update(self, dt=None):
