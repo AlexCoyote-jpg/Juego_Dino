@@ -2,8 +2,8 @@ import pygame
 from core.juego_base import JuegoBase
 
 class MiJuego(JuegoBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(nombre="Círculo Central")
+    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
+        super().__init__(pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
         self.circulo_color = (0, 120, 255)
         self.circulo_radio = 60
 

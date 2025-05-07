@@ -10,6 +10,12 @@ class NavigationBar:
         self.down = down
         self._anim_sizes = [0.0 for _ in options]
         self.botones = []
+    
+    def get_height(self):
+        # Devuelve la altura actual de la barra de navegación (útil para juegos)
+        alto = pygame.display.get_surface().get_height() if pygame.display.get_surface() else 700
+        return max(36, min(60, int(alto * 0.07))) + max(6, int(alto * 0.01)) * 2
+
 
     def draw(self, surface, logo=None, logo_height=None):
         ancho, alto = surface.get_size()
