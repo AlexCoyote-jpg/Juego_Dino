@@ -1,19 +1,26 @@
 import pygame
 import random
 from pygame.locals import *
+from ui.utils import Boton  # Usa la clase Boton para los botones de opciones
 
 def generar_opciones(respuesta, min_diff=1, max_diff=3, cantidad=4):
     """
     Genera una lista de opciones (incluyendo la respuesta correcta) para preguntas de opción múltiple.
+    Evita duplicados y asegura que todas las opciones sean positivas y distintas.
     """
-    opciones = set()
-    opciones.add(respuesta)
-    while len(opciones) < cantidad:
+    opciones = set([respuesta])
+    intentos = 0
+    while len(opciones) < cantidad and intentos < 30:
         delta = random.randint(min_diff, max_diff)
         signo = random.choice([-1, 1])
         opcion = respuesta + signo * delta
-        if opcion != respuesta and opcion > 0:
+        # Evita opciones negativas, duplicadas o cero
+        if opcion > 0 and opcion != respuesta:
             opciones.add(opcion)
+        intentos += 1
+    # Si no se lograron suficientes opciones, rellena con valores positivos únicos
+    while len(opciones) < cantidad:
+        opciones.add(respuesta + random.randint(1, 10))
     return list(opciones)
 
 class JuegoLogico:
@@ -31,8 +38,8 @@ class JuegoLogico:
         # --- Dimensiones y fuentes ---
         self.ANCHO = pantalla.get_width()
         self.ALTO = pantalla.get_height()
-        self.fuente_titulo = pygame.font.SysFont("Segoe UI", 48, bold=True)
-        self.fuente = pygame.font.SysFont("Segoe UI", 28)
+        self.fuente_titulo = pygame.font.SysFont("Segoe UI", max(36, int(0.04 * pantalla.get_height())), bold=True)
+        self.fuente = pygame.font.SysFont("Segoe UI", max(20, int(0.025 * pantalla.get_height())))
         self.reloj = pygame.time.Clock()
 
         # --- Estado del juego ---
@@ -40,6 +47,7 @@ class JuegoLogico:
         self.opciones = []
         self.respuesta_correcta = None
         self.opciones_rects = []
+        self.boton_opciones = []  # Lista de botones de opciones
         self.explicacion = ""
         self.puntuacion = 0
         self.jugadas_totales = 0
@@ -69,13 +77,19 @@ class JuegoLogico:
 
     def cargar_imagenes(self):
         # Usa imágenes del diccionario si existen, si no, usa cargar_imagen_segura
+        # Ajusta tamaño para que no sobresalgan
+        dino_size = (max(60, self.ANCHO // 16), max(60, self.ALTO // 12))
+        mapa_size = (max(80, self.ANCHO // 12), max(60, self.ALTO // 14))
         self.dino_img = self.images.get("dino4") if self.images else None
         self.mapa_img = self.images.get("mapa") if self.images else None
-        # Si no existen, intenta cargar desde archivo
         if not self.dino_img:
-            self.dino_img = self.cargar_imagen_segura('dino4.png', (150, 150), (0, 150, 0))
+            self.dino_img = self.cargar_imagen_segura('dino4.png', dino_size, (0, 150, 0))
+        else:
+            self.dino_img = pygame.transform.smoothscale(self.dino_img, dino_size)
         if not self.mapa_img:
-            self.mapa_img = self.cargar_imagen_segura('mapa.png', (200, 150), (255, 223, 186))
+            self.mapa_img = self.cargar_imagen_segura('mapa.png', mapa_size, (255, 223, 186))
+        else:
+            self.mapa_img = pygame.transform.smoothscale(self.mapa_img, mapa_size)
 
     def cargar_imagen_segura(self, archivo, tam, color_fondo):
         try:
@@ -229,29 +243,44 @@ class JuegoLogico:
     def dibujar(self, pantalla):
         # Método requerido por el screen manager
         self.dibujar_fondo()
-        # Dibuja imágenes si existen
+        # Dibuja imágenes si existen, ajustadas y sin sobresalir
+        margen = 20
         if self.dino_img:
-            self.pantalla.blit(self.dino_img, (50, 180))
+            self.pantalla.blit(self.dino_img, (margen, self.ALTO - self.dino_img.get_height() - margen))
         if self.mapa_img:
-            self.pantalla.blit(self.mapa_img, (self.ANCHO - 250, 400))
+            self.pantalla.blit(self.mapa_img, (self.ANCHO - self.mapa_img.get_width() - margen, self.ALTO - self.mapa_img.get_height() - margen))
         # Problema
-        self.mostrar_texto_multilinea(self.problema_actual, self.ANCHO // 2, 100, centrado=True)
-        # Opciones
+        self.mostrar_texto_multilinea(self.problema_actual, self.ANCHO // 2, 80, centrado=True)
+        # Opciones con Boton de ui.utils
         self.opciones_rects = []
+        self.boton_opciones = []
         colores = [(144, 238, 144), (173, 216, 230), (255, 255, 153), (255, 182, 193)]
         color_hover_default = (200, 200, 200)
+        # Calcula posiciones y tamaños de botones de forma responsiva
+        n = len(self.opciones)
+        boton_w = max(70, min(120, self.ANCHO // (n * 2)))
+        boton_h = max(40, min(70, self.ALTO // 16))
+        espacio = max(20, min(50, self.ANCHO // (n * 6)))
+        total_w = n * boton_w + (n - 1) * espacio
+        x_ini = (self.ANCHO - total_w) // 2
+        y_opciones = int(self.ALTO * 0.32)
         for i, opcion in enumerate(self.opciones):
-            x = self.ANCHO // 2 - 100 + i * 120
-            color_normal = colores[i % len(colores)]
-            color_hover = color_hover_default
-            rect = self.dibujar_boton(str(opcion), x, 250, 100, 60, color_normal, color_hover)
-            self.opciones_rects.append(rect)
+            x = x_ini + i * (boton_w + espacio)
+            boton = Boton(
+                str(opcion), x, y_opciones, boton_w, boton_h,
+                color_normal=colores[i % len(colores)],
+                color_hover=color_hover_default,
+                texto_adaptativo=True
+            )
+            boton.draw(self.pantalla)
+            self.opciones_rects.append(boton.rect)
+            self.boton_opciones.append(boton)
         # Mensaje y explicación
         if self.tiempo_mensaje > 0:
-            self.mostrar_texto(self.mensaje, self.ANCHO // 2, 400, centrado=True)
+            self.mostrar_texto(self.mensaje, self.ANCHO // 2, 320, centrado=True)
             self.tiempo_mensaje -= 1
             if "Correcto" in self.mensaje or "¡Genial!" in self.mensaje or "¡Eres un crack!" in self.mensaje or "¡Dino-aplausos!" in self.mensaje:
-                self.mostrar_texto_multilinea(self.explicacion, self.ANCHO // 2, 450, centrado=True)
+                self.mostrar_texto_multilinea(self.explicacion, self.ANCHO // 2, 370, centrado=True)
         # Puntuación y racha
         self.mostrar_texto(f"Puntuación: {self.puntuacion}/{self.jugadas_totales}", 30, self.ALTO - 35)
         self.mostrar_texto(f"Racha: {self.racha}", self.ANCHO - 190, self.ALTO - 35)
@@ -260,19 +289,20 @@ class JuegoLogico:
             self.navbar.draw(self.pantalla, self.images.get("dino_logo") if self.images else None)
 
     def handle_event(self, evento):
-        # Método requerido por el screen manager
+        # Compatible con ScreenManager: recibe un solo evento
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
             if self.return_to_menu:
                 self.return_to_menu()
-        if self.navbar and self.navbar.handle_event(evento, self.images.get("dino_logo") if self.images else None) is not None:
-            if self.return_to_menu:
+        if self.navbar and hasattr(self.navbar, "handle_event"):
+            nav_result = self.navbar.handle_event(evento, self.images.get("dino_logo") if self.images else None)
+            if nav_result is not None and self.return_to_menu:
                 self.return_to_menu()
-        if self.manejar_eventos_juego(evento):
-            return
-    def draw(self, pantalla):
-        # Método requerido por el screen manager
-        self.dibujar(pantalla)
+        self.manejar_eventos_juego(evento)
 
-    def update(self, dt):
-        # Método requerido por el screen manager
+    def update(self, dt=None):
+        # Compatible con ScreenManager: dt puede ser None
         pass
+
+    def draw(self, surface):
+        # Compatible con ScreenManager: surface es la pantalla
+        self.dibujar(surface)

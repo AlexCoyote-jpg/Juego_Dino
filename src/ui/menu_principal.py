@@ -10,10 +10,13 @@ from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
 from ui.Emojis import mostrar_alternativo_adaptativo
 from core.game_state import *
 from games import JUEGOS_DISPONIBLES
-from ui.screen_manager import create_screen_manager, set_screen, update_screen, draw_screen, HomeScreen, JuegosScreen, ChatBotScreen, handle_event_screen, get_screen
+from ui.screen_manager import (
+    ScreenManager, HomeScreen, JuegosScreen, ChatBotScreen, GameInstanceScreen,
+    set_screen, handle_event_screen, update_screen, draw_screen
+)
 
 class MenuPrincipal:
-    def __init__(self, pantalla, fondo, images, sounds, config, screen_manager):
+    def __init__(self, pantalla, fondo, images, sounds, config, screen_manager=None):
         # --- Inicialización de pantalla y dimensiones base ---
         self.pantalla = pantalla
         self.base_width = pantalla.get_width()
@@ -43,7 +46,10 @@ class MenuPrincipal:
         self.clock = pygame.time.Clock()
 
         # --- Screen manager ---
-        self.screen_manager = screen_manager
+        if screen_manager is None:
+            self.screen_manager = ScreenManager()
+        else:
+            self.screen_manager = screen_manager
 
     def sx(self, x):
         return int(x * self.pantalla.get_width() / self.base_width)
@@ -172,72 +178,80 @@ class MenuPrincipal:
             fuente=self.font_texto
         )
         
+    def handle_juegos_eventos(self, event):
+        """Handle events for the games screen."""
+        if event.type == pygame.MOUSEBUTTONDOWN and hasattr(self, "juego_rects"):
+            for idx, rect in enumerate(self.juego_rects):
+                if idx < len(JUEGOS_DISPONIBLES) and rect.collidepoint(event.pos):
+                    print(f"Click en juego {idx}: {JUEGOS_DISPONIBLES[idx]['nombre']}")
+                    juego = JUEGOS_DISPONIBLES[idx]
+                    if callable(juego["clase"]):
+                        instancia = juego["clase"](
+                            self.pantalla,
+                            self.config,
+                            self.dificultad_seleccionada,
+                            self.fondo,
+                            self.navbar,
+                            self.images,
+                            self.sounds,
+                            return_to_menu=lambda: set_screen(self.screen_manager, JuegosScreen(self, self.dificultad_seleccionada))
+                        )
+                        game_screen = GameInstanceScreen(instancia)
+                        set_screen(self.screen_manager, game_screen)
+                        return True
+        return False
 
     def run(self):
         running = True
         last_time = time.time()
+        # Al iniciar, muestra la pantalla Home
         set_screen(self.screen_manager, HomeScreen(self))
-        Fps = 60
-
-        juego_activo = None  # Para saber si hay un juego abierto
 
         while running:
             now = time.time()
             dt = now - last_time
             last_time = now
 
-            eventos = pygame.event.get()
-            for event in eventos:
+            # Collect all events for this frame
+            events = pygame.event.get()
+
+            # Check for quit event
+            for event in events:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.VIDEORESIZE:
                     self.base_width, ALTO = event.w, event.h
                     self.pantalla = pygame.display.set_mode((self.base_width, ALTO), pygame.RESIZABLE)
                     self.fondo.resize(self.base_width, ALTO)
-                nav_result = self.navbar.handle_event(event, self.logo)
-                if nav_result is not None:
-                    vista = self.niveles[nav_result]
-                    if vista == "Home":
-                        set_screen(self.screen_manager, HomeScreen(self))
-                    elif vista in ("Fácil", "Normal", "Difícil"):
-                        set_screen(self.screen_manager, JuegosScreen(self, vista))
-                    elif vista == "ChatBot":
-                        set_screen(self.screen_manager, ChatBotScreen(self))
 
-                # --- Detectar click sobre un juego en la grilla SOLO si está activa la pantalla de juegos ---
-                screen_actual = get_screen(self.screen_manager)
-                if (
-                    isinstance(screen_actual, JuegosScreen)
-                    and hasattr(self, "juego_rects") and self.juego_rects
-                ):
-                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                        mouse_pos = event.pos
-                        for idx, rect in enumerate(self.juego_rects):
-                            if rect.collidepoint(mouse_pos):
-                                juego_info = JUEGOS_DISPONIBLES[idx]
-                                clase_juego = juego_info.get("clase")
-                                if clase_juego is not None:
-                                    dificultad = getattr(self, "dificultad_seleccionada", "Normal")
-                                    def volver():
-                                        set_screen(self.screen_manager, JuegosScreen(self, dificultad))
-                                    instancia = clase_juego(
-                                        self.pantalla, self.config, dificultad,
-                                        self.fondo, self.navbar, self.images, self.sounds,
-                                        return_to_menu=volver
-                                    )
-                                    set_screen(self.screen_manager, instancia)
-                                break
+            # First, let the navbar handle events
+            for event in events:
+                if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                    nav_result = self.navbar.handle_event(event, self.logo)
+                    if nav_result is not None:
+                        vista = self.niveles[nav_result]
+                        # Cambia la pantalla activa usando el screen manager
+                        if vista == "Home":
+                            set_screen(self.screen_manager, HomeScreen(self))
+                        elif vista in ("Fácil", "Normal", "Difícil"):
+                            set_screen(self.screen_manager, JuegosScreen(self, vista))
+                        elif vista == "ChatBot":
+                            set_screen(self.screen_manager, ChatBotScreen(self))
 
-            # Delegar todos los eventos al screen activo (incluye juegos)
-            handle_event_screen(self.screen_manager, eventos)
+            # Then, let the current screen handle remaining events
+            # This ensures game screens get priority over menu events
+            handle_event_screen(self.screen_manager, events)
 
-            # Fondo dinámico
+            # 1. Fondo dinámico
+            Fps = 60
             self.fondo.update(dt * Fps)
             self.fondo.draw(self.pantalla)
-            # Actualizar y dibujar el screen activo
+
+            # 2. Elementos de la pantalla según selección usando el screen manager
             update_screen(self.screen_manager, dt)
             draw_screen(self.screen_manager, self.pantalla)
-            # Barra de navegación con logo
+
+            # 3. Barra de navegación con logo (siempre encima de todo)
             self.navbar.draw(self.pantalla, self.logo)
 
             pygame.display.flip()
@@ -245,9 +259,9 @@ class MenuPrincipal:
 
 def run_menu_principal(pantalla, fondo, images, sounds, config):
     # Crear el screen manager
-    screen_manager = create_screen_manager()
+    screen_manager = ScreenManager()
 
     # Al iniciar el menú principal
     menu = MenuPrincipal(pantalla, fondo, images, sounds, config, screen_manager)
-    set_screen(screen_manager, menu)
+    screen_manager.set_screen(HomeScreen(menu))
     menu.run()
