@@ -1,5 +1,5 @@
 import pygame
-from utils import Boton, Boton_Images
+from utils_antiguo import Boton, Boton_Images
 
 def main():
     pygame.init()
