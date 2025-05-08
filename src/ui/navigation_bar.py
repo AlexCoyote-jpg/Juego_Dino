@@ -71,9 +71,9 @@ class NavigationBar:
 
         colores = [
             ((120, 170, 255), (80, 120, 255)),
-            ((255, 170, 170), (255, 120, 120)),
             ((140, 220, 180), (100, 200, 160)),
             ((255, 210, 120), (255, 180, 80)),
+            ((255, 170, 170), (255, 120, 120)),
             ((200, 160, 255), (160, 120, 255)),
         ]
         txt_color_sel = (30, 30, 50)
@@ -103,7 +103,7 @@ class NavigationBar:
             if i == self.selected:
                 color_top, color_bottom = colores[i % len(colores)]
                 color_texto = txt_color_sel
-                border_color = True
+                border_color = (68, 68, 78, 255)  # Negro grisáceo translúcido tipo sombra
                 estilo = "apple"
                 text_alpha = 255
             else:
