@@ -6,7 +6,7 @@ import time
 import random
 from ui.navigation_bar import NavigationBar
 from ui.animations import animar_dinos, dibujar_caja_juegos
-from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
+from ui.utils import Boton, dibujar_caja_texto, mostrar_texto_adaptativo,TooltipManager
 from ui.Emojis import mostrar_alternativo_adaptativo
 from core.game_state import *
 from games import JUEGOS_DISPONIBLES
@@ -57,6 +57,9 @@ class MenuPrincipal:
             self.screen_manager = ScreenManager()
         else:
             self.screen_manager = screen_manager
+
+        # --- Tooltip manager ---
+        self.tooltip_manager = TooltipManager()
 
     def sx(self, x):
         return int(x * self.pantalla.get_width() / self.base_width)
@@ -214,6 +217,7 @@ class MenuPrincipal:
         # Al iniciar, muestra la pantalla Home
         set_screen(self.screen_manager, HomeScreen(self))
 
+
         while running:
             now = time.time()
             dt = now - last_time
@@ -230,6 +234,9 @@ class MenuPrincipal:
                     self.base_width, ALTO = event.w, event.h
                     self.pantalla = pygame.display.set_mode((self.base_width, ALTO), pygame.RESIZABLE)
                     self.fondo.resize(self.base_width, ALTO)
+
+            # Actualiza tooltips globales si usas botones personalizados
+            self.tooltip_manager.update(pygame.mouse.get_pos())
 
             # First, let the navbar handle events
             for event in events:

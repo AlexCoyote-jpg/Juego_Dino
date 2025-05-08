@@ -86,7 +86,7 @@ def split_text_with_emojis(text: str) -> List[str]:
 
 # --- Tooltip Manager ---
 class TooltipManager:
-    def __init__(self, delay: float = 1.0, font_size: int = 16, 
+    def __init__(self, delay: float = 2.0, font_size: int = 16, 
                  bg_color: Tuple[int, int, int] = (50, 50, 50), 
                  text_color: Tuple[int, int, int] = (255, 255, 255),
                  padding: int = 8, border_radius: int = 6):

@@ -3,7 +3,7 @@ import random
 import os
 from games.cards import dibujar_carta_generica
 from games.victory import mostrar_victoria
-from ui.utils import Boton_Images
+from ui.utils import Boton  # Cambiado de Boton_Images a Boton
 from core.juego_base import JuegoBase
 
 IMG_PATH = os.path.join("assets", "imagenes")
@@ -328,7 +328,7 @@ class JuegoMemoriaJurasica(JuegoBase):
         icono = self.img_sonido_apagado if self.silenciado else self.img_sonido_encendido
         if icono.get_width() != img_size or icono.get_height() != img_size:
             icono = pygame.transform.smoothscale(icono, (img_size, img_size))
-        btn_silencio = Boton_Images(
+        btn_silencio = Boton(
             "", x_btn, y_btn, btn_size, btn_size,
             imagen=icono,
             imagen_pos="center",
