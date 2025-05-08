@@ -116,74 +116,94 @@ class JuegoSumaResta(JuegoBase):
             self.opciones_botones.append(boton)
 
     def dibujar_pantalla_juego(self):
-        # Fondo
-        self.dibujar_fondo()
-        # Imágenes decorativas ajustadas
-        alto_img = int(self.ALTO * 0.22)
-        # Calcula la posición vertical para dino, cueva y piedritas (más arriba de los botones)
-        y_fila = self.navbar_height + 110  # más arriba, debajo del título
-        # Dino a la izquierda, alineado con piedritas
-        if self.dino_img:
-            self.pantalla.blit(self.dino_img, (60, y_fila))
-        # Cueva a la derecha, alineada con piedritas
-        if self.cueva_img:
-            self.pantalla.blit(self.cueva_img, (self.ANCHO - alto_img - 60, y_fila))
-        # Piedritas alineadas entre dino y cueva
-        if self.piedrita:
-            x_inicio = 60 + alto_img  # después del dino
-            x_final = self.ANCHO - alto_img - 60  # antes de la cueva
-            espacio_total = x_final - x_inicio
-            piedrita_w = self.piedrita.get_width()
-            n_piedritas = max(3, min(8, espacio_total // (piedrita_w + 10)))
-            if n_piedritas > 1:
-                espacio_entre = (espacio_total - n_piedritas * piedrita_w) // (n_piedritas - 1)
-            else:
-                espacio_entre = 0
-            for i in range(n_piedritas):
-                x = x_inicio + i * (piedrita_w + espacio_entre)
-                self.pantalla.blit(self.piedrita, (x, y_fila + alto_img // 3))
-        # Piedrita decorativa arriba a la izquierda
-        if self.piedrita:
-            self.pantalla.blit(self.piedrita, (30, 30))
-        # Título
-        self.mostrar_texto(
-            f"Dino Suma y Resta - Nivel {self.nivel_actual}",
-            x=0,
-            y=self.navbar_height + 28,
-            w=self.ANCHO,
-            h=60,
-            fuente=self.fuente_titulo,
-            color=(70, 130, 180),
-            centrado=True
-        )
-        # Problema
-        self.mostrar_texto_multilinea(
-            self.problema_actual,
-            x=self.ANCHO // 2,
-            y=self.navbar_height + 150 + alto_img,
-            fuente=self.fuente,
-            centrado=True
-        )
-        # Opciones
-        for boton in self.opciones_botones:
-            boton.draw(self.pantalla, self.tooltip_manager)
-        # Mensaje de retroalimentación
-        if self.tiempo_mensaje > 0:
-            color_msg = (152, 251, 152) if "Correcto" in self.mensaje else (255, 182, 193)
-            dibujar_caja_texto(self.pantalla, self.ANCHO//2 - 250, self.ALTO - 180, 500, 50, color_msg)
+        try:
+            # Fondo
+            self.dibujar_fondo()
+            
+            # Título
             self.mostrar_texto(
-                self.mensaje,
-                x=self.ANCHO//2 - 250,
-                y=self.ALTO - 180,
-                w=500,
-                h=50,
-                fuente=self.fuente,
-                color=(30, 30, 30),
+                f"Dino Suma y Resta - Nivel {self.nivel_actual}",
+                x=0,
+                y=self.navbar_height + 28,
+                w=self.ANCHO,
+                h=60,
+                fuente=self.fuente_titulo,
+                color=(70, 130, 180),
                 centrado=True
             )
-            self.tiempo_mensaje -= 1
-        # Puntaje bonito y responsivo
-        self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, frase="Puntuación")
+            
+            # Problema (usando método más seguro)
+            texto_problem_y = self.navbar_height + 95
+            altura_caja = 80
+            dibujar_caja_texto(
+                self.pantalla, 
+                self.ANCHO//2 - 350,
+                texto_problem_y, 
+                700,
+                altura_caja,
+                (245, 245, 245, 200)
+            )
+            
+            # Usar fuente y tamaño de texto fijo para asegurar compatibilidad
+            self.mostrar_texto(
+                self.problema_actual,
+                x=self.ANCHO//2 - 320,
+                y=texto_problem_y + 10,
+                w=640,
+                h=altura_caja - 20,
+                fuente=self.fuente,
+                color=(20, 20, 80),
+                centrado=True
+            )
+            
+            # Imágenes decorativas ajustadas
+            alto_img = int(self.ALTO * 0.22)
+            y_fila = texto_problem_y + altura_caja + 20
+            
+            # Dino a la izquierda
+            if self.dino_img:
+                self.pantalla.blit(self.dino_img, (60, y_fila))
+                
+            # Cueva a la derecha
+            if self.cueva_img:
+                self.pantalla.blit(self.cueva_img, (self.ANCHO - alto_img - 60, y_fila))
+                
+            # Exactamente 3 piedritas entre dino y cueva (simplificado)
+            if self.piedrita:
+                espacio_total = self.ANCHO - 120 - alto_img * 2
+                for i in range(3):
+                    x = 60 + alto_img + espacio_total * (i + 1) // 4
+                    self.pantalla.blit(self.piedrita, (x, y_fila + alto_img // 3))
+            
+            # Opciones (manejo simplificado)
+            for boton in self.opciones_botones:
+                # Usar método draw simplificado si está disponible
+                if hasattr(boton, 'draw_simple'):
+                    boton.draw_simple(self.pantalla)
+                else:
+                    boton.draw(self.pantalla, self.tooltip_manager)
+                
+            # Mensaje de retroalimentación y puntaje
+            if self.tiempo_mensaje > 0:
+                color_msg = (152, 251, 152) if "Correcto" in self.mensaje else (255, 182, 193)
+                dibujar_caja_texto(self.pantalla, self.ANCHO//2 - 250, self.ALTO - 180, 500, 50, color_msg)
+                self.mostrar_texto(
+                    self.mensaje,
+                    x=self.ANCHO//2 - 250,
+                    y=self.ALTO - 180,
+                    w=500,
+                    h=50,
+                    fuente=self.fuente,
+                    color=(30, 30, 30),
+                    centrado=True
+                )
+                self.tiempo_mensaje -= 1
+            self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, frase="Puntuación")
+        except Exception as e:
+            # Registrar el error pero permitir que el juego continúe
+            print(f"Error en dibujar_pantalla_juego: {e}")
+            import traceback
+            traceback.print_exc()
 
     def handle_event(self, evento):
         super().handle_event(evento)
