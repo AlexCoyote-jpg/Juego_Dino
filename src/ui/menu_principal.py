@@ -30,7 +30,14 @@ class MenuPrincipal:
 
         # --- Barra de navegación y niveles ---
         self.niveles = ["Home", "Fácil", "Normal", "Difícil", "ChatBot"]
-        self.navbar = NavigationBar(self.niveles, down=False)
+        tooltips = [
+            "Ir a la pantalla principal",
+            "Juegos para principiantes",
+            "Juegos intermedios",
+            "Juegos avanzados",
+            "Habla con el ChatBot"
+        ]
+        self.navbar = NavigationBar(self.niveles, down=False, tooltips=tooltips)
         self.logo = self.images.get("dino_logo") if self.images else None
 
         # --- Recursos gráficos de dinosaurios ---
