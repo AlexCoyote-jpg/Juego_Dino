@@ -1,10 +1,35 @@
 # Clase base para juegos: define la interfaz y utilidades comunes para todos los juegos.
 
 import pygame
+import random
+from ui.utils import (
+    mostrar_texto_adaptativo, Boton, obtener_fuente, render_text_cached,
+    dibujar_caja_texto, TooltipManager
+)
+from ui.Emojis import mostrar_alternativo_adaptativo
+
+# Ejemplos para mostrar en mostrar_mensaje_temporal o donde corresponda
+
+# Cuando la respuesta es correcta:
+mensajes_correcto = [
+    "¡Excelente! 🦕✨",
+    "¡Muy bien, Dino está feliz! 🥚🎉",
+    "¡Correcto! ¡Sigue así! 🌟",
+    "¡Genial! ¡Eres un crack de las mates! 🦖"
+]
+
+# Cuando la respuesta es incorrecta:
+mensajes_incorrecto = [
+    "¡Ups! Intenta de nuevo, tú puedes 🦕",
+    "¡No te rindas! La respuesta era {respuesta} 🥚",
+    "¡Casi! Sigue practicando 💪",
+    "¡Ánimo! Dino confía en ti 🦖"
+]
 
 class JuegoBase:
-    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
+    def __init__(self, nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
         # --- Integración con el menú principal ---
+        self.nombre = nombre
         self.pantalla = pantalla
         self.config = config
         self.dificultad = dificultad
@@ -13,14 +38,21 @@ class JuegoBase:
         self.images = images
         self.sounds = sounds
         self.return_to_menu = return_to_menu
+
         # --- Dimensiones y fuentes ---
         self.ANCHO = pantalla.get_width()
         self.ALTO = pantalla.get_height()
-        self.fuente_titulo = pygame.font.SysFont("Segoe UI", max(36, int(0.04 * pantalla.get_height())), bold=True)
-        self.fuente = pygame.font.SysFont("Segoe UI", max(20, int(0.025 * pantalla.get_height())))
+        self.fuente_titulo = obtener_fuente(max(36, int(0.04 * self.ALTO)), negrita=True)
+        self.fuente = obtener_fuente(max(20, int(0.025 * self.ALTO)))
         self.reloj = pygame.time.Clock()
         self.navbar_height = 0
         self._update_navbar_height()
+
+        # --- Tooltip manager (opcional para juegos con tooltips) ---
+        self.tooltip_manager = TooltipManager(delay=1.0)
+
+        # --- Actualiza el título de la ventana ---
+        pygame.display.set_caption(f"{self.nombre} - {self.dificultad}")
 
     def _update_navbar_height(self):
         if self.navbar and hasattr(self.navbar, "get_height"):
@@ -28,43 +60,117 @@ class JuegoBase:
         elif self.navbar and hasattr(self.navbar, "height"):
             self.navbar_height = self.navbar.height
         else:
-            self.navbar_height = 60  # Valor por defecto si no se puede obtener
+            self.navbar_height = 60  # Valor por defecto
 
     def cargar_imagenes(self):
         # Para ser sobrescrito por cada juego si necesita cargar imágenes
         pass
 
     def dibujar_fondo(self):
-        # Dibuja el fondo respetando la barra de navegación (no dibuja sobre ella)
+        # Dibuja el fondo respetando la barra de navegación
         if self.pantalla:
             self.pantalla.fill((255, 255, 255))
-            # Si quieres un área reservada visual para la navbar, puedes dibujar una franja aquí si lo deseas
+            # Puedes dibujar aquí un área reservada para la navbar si lo deseas
 
-    def mostrar_texto(self, texto, x, y, fuente=None, centrado=False):
+    def mostrar_texto(self, texto, x, y, w, h, fuente=None, color=(30,30,30), centrado=False):
         fuente = fuente or self.fuente
-        txt = fuente.render(texto, True, (30, 30, 30))
-        rect = txt.get_rect()
-        # Ajusta la posición Y para no solaparse con la barra de navegación
-        y_ajustado = max(y, self.navbar_height + rect.height // 2 if centrado else self.navbar_height)
-        if centrado:
-            rect.center = (x, y_ajustado)
-        else:
-            rect.topleft = (x, y_ajustado)
-        if self.pantalla:
-            self.pantalla.blit(txt, rect)
+        mostrar_texto_adaptativo(
+            pantalla=self.pantalla,
+            texto=texto,
+            x=x,
+            y=y,
+            w=w,
+            h=h,
+            fuente_base=fuente,
+            color=color,
+            centrado=centrado
+        )
 
-    def mostrar_texto_multilinea(self, texto, x, y, fuente=None, centrado=False):
+    def mostrar_texto_multilinea(self, texto, x, y, fuente=None, centrado=False, line_height=36):
         fuente = fuente or self.fuente
         lineas = texto.split("\n")
         y_actual = max(y, self.navbar_height)
         for i, linea in enumerate(lineas):
-            self.mostrar_texto(linea, x, y_actual + i * 36, fuente, centrado)
+            self.mostrar_texto(linea, x, y_actual + i * line_height, fuente, centrado=centrado)
+
+    def mostrar_puntaje(self, juegos_ganados, juegos_totales, frase="¡Puntaje!"):
+        """
+        Muestra el puntaje en la parte inferior izquierda en una caja bonita con emojis.
+        """
+        # Dimensiones y posición responsiva
+        ancho_caja = max(180, int(self.ANCHO * 0.18))
+        alto_caja = max(48, int(self.ALTO * 0.07))
+        x = 18
+        y = self.ALTO - alto_caja - 18
+
+        texto = f"🏆 {frase}: {juegos_ganados}/{juegos_totales} 🎮"
+
+        dibujar_caja_texto(
+            self.pantalla,
+            x, y, ancho_caja, alto_caja,
+            color=(240, 250, 255, 230),
+            radius=18,
+            texto=texto,
+            fuente=self.fuente,
+            color_texto=(30, 60, 90)
+        )
+
+    @staticmethod
+    def mostrar_victoria(
+        pantalla, sx, sy, ancho, alto, fuente_titulo, fuente_texto, juego_base, carta_rects,
+        color_panel=(255, 255, 224), color_borde=(255, 215, 0)
+    ):
+        ancho_panel = sx(500)
+        alto_panel = sy(200)
+        x_panel = (ancho - ancho_panel) // 2
+        y_panel = (alto - alto_panel) // 2
+        panel = pygame.Surface((ancho_panel, alto_panel), pygame.SRCALPHA)
+        for i in range(alto_panel):
+            factor = i / alto_panel
+            r = int(255 - factor * 50)
+            g = int(250 - factor * 20)
+            b = int(150 + factor * 50)
+            pygame.draw.line(panel, (r, g, b, 240), (0, i), (ancho_panel, i))
+        pantalla.blit(panel, (x_panel, y_panel))
+        pygame.draw.rect(pantalla, color_borde, (x_panel, y_panel, ancho_panel, alto_panel), 4, border_radius=20)
+        mostrar_alternativo_adaptativo(
+            pantalla, "¡FELICIDADES! 🎉",
+            x_panel, y_panel + sy(20), ancho_panel, sy(60),
+            fuente_titulo, (100, 160, 220), centrado=True
+        )
+        mostrar_texto_adaptativo(
+            pantalla, "¡Has completado el memorama!",
+            x_panel, y_panel + sy(80), ancho_panel, sy(40),
+            fuente_texto, (30, 30, 30), centrado=True
+        )
+        # Botón de reinicio
+        boton = Boton(
+            "¡Reiniciar! 🔄",
+            x_panel + (ancho_panel - sx(300)) // 2,
+            y_panel + sy(130),
+            sx(300), sy(50),
+            color_normal=(100, 160, 220),
+            color_hover=(30, 60, 120),
+            fuente=pygame.font.SysFont("Segoe UI Emoji", 28),
+            texto_adaptativo=True
+        )
+        boton.draw(pantalla)
+        carta_rects.append((boton.rect, {'id': 'siguiente'}))
+        dibujar_caja_texto(
+            pantalla, x_panel, y_panel, ancho_panel, alto_panel,
+            color=(220, 240, 255, 220),
+            radius=16,
+            texto="¡Victoria! 🎉",
+            fuente=fuente_titulo,
+            color_texto=(30, 30, 60)
+        )
 
     def handle_event(self, evento):
-        # Maneja el redimensionamiento de la ventana y actualiza la altura de la navbar
+        # Lógica base: salir, resize, etc.
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
             if self.return_to_menu:
                 self.return_to_menu()
+                pygame.display.set_caption("jugando con dino")
         if evento.type == pygame.VIDEORESIZE:
             self.ANCHO, self.ALTO = evento.w, evento.h
             self.pantalla = pygame.display.set_mode((self.ANCHO, self.ALTO), pygame.RESIZABLE)
@@ -84,3 +190,10 @@ class JuegoBase:
     def draw(self, surface):
         # Para ser sobrescrito por cada juego
         pass
+
+    def mostrar_feedback(self, es_correcto, respuesta_correcta=None):
+        if es_correcto:
+            mensaje = random.choice(mensajes_correcto)
+        else:
+            mensaje = random.choice(mensajes_incorrecto).format(respuesta=respuesta_correcta)
+        self.mostrar_mensaje_temporal(mensaje)

@@ -10,26 +10,42 @@ VERDE_OPCIONES = (180, 240, 180)
 VERDE_OPCIONES_HOVER = (120, 200, 120)
 
 def generar_problema_suma_resta(nivel):
+    """Genera un problema de suma o resta con enunciado temático según el nivel"""
     if nivel == "Básico":
-        a, b = random.randint(1, 10), random.randint(1, 10)
-        if random.choice([True, False]):
-            return f"{a} + {b}", a + b
+        a = random.randint(1, 10)
+        b = random.randint(1, min(10, a))
+        operacion = random.choice(['+', '-'])
+        if operacion == '+':
+            problema = f"Dino encontró {a} huevos en su cueva y luego encontró {b} más en el bosque. ¿Cuántos huevos tiene en total?"
+            respuesta = a + b
         else:
-            a, b = max(a, b), min(a, b)
-            return f"{a} - {b}", a - b
+            problema = f"Dino tenía {a} huevos y usó {b} para hacer una tortilla. ¿Cuántos huevos le quedan?"
+            respuesta = a - b
     elif nivel == "Medio":
-        a, b = random.randint(10, 50), random.randint(1, 30)
-        if random.choice([True, False]):
-            return f"{a} + {b}", a + b
+        a = random.randint(10, 20)
+        b = random.randint(1, min(15, a))
+        operacion = random.choice(['+', '-'])
+        if operacion == '+':
+            problema = f"Dino recolectó {a} frutas y luego encontró {b} más. ¿Cuántas frutas tiene ahora?"
+            respuesta = a + b
         else:
-            a, b = max(a, b), min(a, b)
-            return f"{a} - {b}", a - b
+            problema = f"Dino tenía {a} piedras y perdió {b} en el camino. ¿Cuántas piedras le quedan?"
+            respuesta = a - b
     else:  # Avanzado
-        a, b, c = random.randint(10, 50), random.randint(1, 30), random.randint(1, 10)
-        if random.choice([True, False]):
-            return f"{a} + {b} - {c}", a + b - c
+        a = random.randint(10, 30)
+        b = random.randint(5, 15)
+        c = random.randint(1, 10)
+        operacion = random.choice(['++', '+-', '-+'])
+        if operacion == '++':
+            problema = f"Dino encontró {a} semillas, luego {b} más y después otras {c}. ¿Cuántas semillas tiene en total?"
+            respuesta = a + b + c
+        elif operacion == '+-':
+            problema = f"Dino tenía {a} hojas, encontró {b} más pero el viento se llevó {c}. ¿Cuántas hojas tiene ahora?"
+            respuesta = a + b - c
         else:
-            return f"{a} - {b} + {c}", a - b + c
+            problema = f"Dino tenía {a} nueces, dio {b} a sus amigos y luego encontró {c} más. ¿Cuántas nueces tiene ahora?"
+            respuesta = a - b + c
+    return problema, respuesta
 
 def generar_opciones(respuesta):
     opciones = [respuesta]
@@ -48,11 +64,23 @@ class JuegoSumaResta(JuegoBase):
         self.jugadas_totales = 0
         self.tiempo_mensaje = 0
         self.mensaje = ""
-        self.logo_img = images.get("dino1") if images else None
+        # Ajusta imágenes y posiciones
+        self.piedrita = images.get("piedrita") if images else None
         self.dino_img = images.get("dino1") if images else None
         self.cueva_img = images.get("cueva") if images else None
-        self.opciones_rects = []
+        self._ajustar_imagenes()
+        self.opciones_botones = []
         self.generar_problema()
+
+    def _ajustar_imagenes(self):
+        # Ajusta el tamaño de las imágenes según el alto de la pantalla
+        alto_img = int(self.ALTO * 0.25)
+        if self.dino_img:
+            self.dino_img = pygame.transform.smoothscale(self.dino_img, (alto_img, alto_img))
+        if self.cueva_img:
+            self.cueva_img = pygame.transform.smoothscale(self.cueva_img, (alto_img, alto_img))
+        if self.piedrita:
+            self.piedrita = pygame.transform.smoothscale(self.piedrita, (60, 60))
 
     def _nivel_from_dificultad(self, dificultad):
         if dificultad == "Fácil":
@@ -65,90 +93,109 @@ class JuegoSumaResta(JuegoBase):
     def generar_problema(self):
         self.problema_actual, self.respuesta_correcta = generar_problema_suma_resta(self.nivel_actual)
         self.opciones = generar_opciones(self.respuesta_correcta)
+        self._init_opciones_botones()
 
-    def dibujar_pantalla_home(self):
-        # Título
-        dibujar_caja_texto(self.pantalla, self.ANCHO//2 - 320, 110, 640, 60, (70, 130, 180))
-        mostrar_texto_adaptativo(
-            self.pantalla, "Bienvenido a Dino Suma y Resta", self.ANCHO//2 - 320, 110, 640, 60,
-            self.fuente_titulo, (255,255,255), centrado=True
-        )
-        # Instrucciones
-        dibujar_caja_texto(self.pantalla, self.ANCHO//2 - 300, 180, 600, 300, (255, 255, 255, 200))
-        instrucciones = (
-            "¡Ayuda a Dino a resolver problemas de matemáticas!\n\n"
-            "Nivel Básico: Sumas y restas simples\n"
-            "Nivel Medio: Números más grandes\n"
-            "Nivel Avanzado: Problemas con múltiples operaciones\n\n"
-            "Haz clic en los botones de arriba para comenzar."
-        )
-        mostrar_texto_adaptativo(
-            self.pantalla, instrucciones, self.ANCHO//2 - 300, 180, 600, 300,
-            self.fuente_texto, (30,30,30), centrado=True
-        )
-
-    def dibujar_pantalla_juego(self):
-        # Imágenes decorativas
-        if self.dino_img:
-            self.pantalla.blit(self.dino_img, (100, 240))
-        if self.cueva_img:
-            self.pantalla.blit(self.cueva_img, (self.ANCHO - 250, 240))
-        # Título
-        mostrar_texto_adaptativo(
-            self.pantalla, f"Dino Suma y Resta - Nivel {self.nivel_actual}",
-            self.ANCHO//2 - 320, 100, 640, 60, self.fuente_titulo, (70, 130, 180), centrado=True
-        )
-        # Problema
-        mostrar_texto_adaptativo(
-            self.pantalla, self.problema_actual, self.ANCHO//2 - 200, 170, 400, 60,
-            self.fuente_texto, (30,30,30), centrado=True
-        )
-        # Opciones
-        self.opciones_rects = []
-        total_w = 3 * 100 + 2 * 60
+    def _init_opciones_botones(self):
+        # Calcula posiciones responsivas
+        total_w = 3 * 120 + 2 * 60
         x_ini = (self.ANCHO - total_w) // 2
+        y_btn = int(self.ALTO * 0.65)
+        self.opciones_botones = []
         for i, opcion in enumerate(self.opciones):
-            x = x_ini + i * (100 + 60)
-            rect = Boton(
-                str(opcion), x, 390, 100, 70,
+            x = x_ini + i * (120 + 60)
+            boton = Boton(
+                str(opcion), x, y_btn, 120, 70,
                 color_normal=VERDE_OPCIONES,
                 color_hover=VERDE_OPCIONES_HOVER,
                 color_texto=(30, 30, 30),
-                fuente=self.fuente_texto,
+                fuente=self.fuente,
                 border_radius=18,
-                estilo="apple"
+                estilo="apple",
+                tooltip=f"Selecciona {opcion}"
             )
-            rect.draw(self.pantalla)
-            self.opciones_rects.append(rect.rect)
+            self.opciones_botones.append(boton)
+
+    def dibujar_pantalla_juego(self):
+        # Fondo
+        self.dibujar_fondo()
+        # Imágenes decorativas ajustadas
+        alto_img = int(self.ALTO * 0.22)
+        # Calcula la posición vertical para dino, cueva y piedritas (más arriba de los botones)
+        y_fila = self.navbar_height + 110  # más arriba, debajo del título
+        # Dino a la izquierda, alineado con piedritas
+        if self.dino_img:
+            self.pantalla.blit(self.dino_img, (60, y_fila))
+        # Cueva a la derecha, alineada con piedritas
+        if self.cueva_img:
+            self.pantalla.blit(self.cueva_img, (self.ANCHO - alto_img - 60, y_fila))
+        # Piedritas alineadas entre dino y cueva
+        if self.piedrita:
+            x_inicio = 60 + alto_img  # después del dino
+            x_final = self.ANCHO - alto_img - 60  # antes de la cueva
+            espacio_total = x_final - x_inicio
+            piedrita_w = self.piedrita.get_width()
+            n_piedritas = max(3, min(8, espacio_total // (piedrita_w + 10)))
+            if n_piedritas > 1:
+                espacio_entre = (espacio_total - n_piedritas * piedrita_w) // (n_piedritas - 1)
+            else:
+                espacio_entre = 0
+            for i in range(n_piedritas):
+                x = x_inicio + i * (piedrita_w + espacio_entre)
+                self.pantalla.blit(self.piedrita, (x, y_fila + alto_img // 3))
+        # Piedrita decorativa arriba a la izquierda
+        if self.piedrita:
+            self.pantalla.blit(self.piedrita, (30, 30))
+        # Título
+        self.mostrar_texto(
+            f"Dino Suma y Resta - Nivel {self.nivel_actual}",
+            x=0,
+            y=self.navbar_height + 28,
+            w=self.ANCHO,
+            h=60,
+            fuente=self.fuente_titulo,
+            color=(70, 130, 180),
+            centrado=True
+        )
+        # Problema
+        self.mostrar_texto_multilinea(
+            self.problema_actual,
+            x=self.ANCHO // 2,
+            y=self.navbar_height + 150 + alto_img,
+            fuente=self.fuente,
+            centrado=True
+        )
+        # Opciones
+        for boton in self.opciones_botones:
+            boton.draw(self.pantalla, self.tooltip_manager)
         # Mensaje de retroalimentación
         if self.tiempo_mensaje > 0:
             color_msg = (152, 251, 152) if "Correcto" in self.mensaje else (255, 182, 193)
-            dibujar_caja_texto(self.pantalla, self.ANCHO//2 - 250, 480, 500, 50, color_msg)
-            mostrar_texto_adaptativo(
-                self.pantalla, self.mensaje, self.ANCHO//2 - 250, 480, 500, 50,
-                self.fuente_texto, (30,30,30), centrado=True
+            dibujar_caja_texto(self.pantalla, self.ANCHO//2 - 250, self.ALTO - 180, 500, 50, color_msg)
+            self.mostrar_texto(
+                self.mensaje,
+                x=self.ANCHO//2 - 250,
+                y=self.ALTO - 180,
+                w=500,
+                h=50,
+                fuente=self.fuente,
+                color=(30, 30, 30),
+                centrado=True
             )
             self.tiempo_mensaje -= 1
-        # Puntuación
-        dibujar_caja_texto(self.pantalla, 20, self.ALTO - 50, 180, 40, (70, 130, 180))
-        mostrar_texto_adaptativo(
-            self.pantalla, f"Puntuación: {self.puntuacion}/{self.jugadas_totales}",
-            20, self.ALTO - 50, 180, 40, self.fuente_texto, (255,255,255), centrado=True
-        )
+        # Puntaje bonito y responsivo
+        self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, frase="Puntuación")
 
     def handle_event(self, evento):
-        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-            if self.return_to_menu:
-                self.return_to_menu()
-        if evento.type == pygame.MOUSEBUTTONDOWN:
-            for i, rect in enumerate(self.opciones_rects):
-                if rect.collidepoint(evento.pos):
+        super().handle_event(evento)
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            for i, boton in enumerate(self.opciones_botones):
+                if boton.collidepoint(evento.pos):
                     self.jugadas_totales += 1
                     if self.opciones[i] == self.respuesta_correcta:
-                        self.mostrar_mensaje_temporal("¡Correcto! ¡Muy bien!")
                         self.puntuacion += 1
+                        self.mostrar_feedback(True)
                     else:
-                        self.mostrar_mensaje_temporal(f"Incorrecto. La respuesta correcta era {self.respuesta_correcta}.")
+                        self.mostrar_feedback(False, self.respuesta_correcta)
                     self.generar_problema()
                     return True
         return False
@@ -156,18 +203,55 @@ class JuegoSumaResta(JuegoBase):
     def mostrar_mensaje_temporal(self, mensaje, tiempo=60):
         self.mensaje = mensaje
         self.tiempo_mensaje = tiempo
-    
+
     def update(self, dt=0):
-        # Aquí puedes poner lógica de actualización si lo necesitas
         pass
 
     def draw(self, surface=None):
         pantalla = surface if surface else self.pantalla
-        self.pantalla = pantalla  # Para mantener consistencia interna
+        self.pantalla = pantalla
         self.dibujar_pantalla_juego()
 
-    # El método ejecutar y el resto de la integración ya la tienes en tu sistema base
+    def on_resize(self, ancho, alto):
+        self.ANCHO = ancho
+        self.ALTO = alto
+        self._ajustar_imagenes()
+        self._init_opciones_botones()
 
-# Para integrarlo en tu menú principal:
-# from games.dino_suma_resta import JuegoSumaResta
-# Y en JUEGOS_DISPONIBLES: {"nombre": "Dino Sumas/Resta", "func": JuegoSumaResta, ...}
+    def mostrar_texto_multilinea(self, texto, x, y, fuente, centrado=False, color=(30, 30, 30), line_height=None, w_max=None):
+        """
+        Sobrescribe para pasar los argumentos requeridos a mostrar_texto.
+        Además, ajusta el texto para que no se salga de la pantalla.
+        """
+        if line_height is None:
+            line_height = fuente.get_height() + 8
+
+        # Ajusta el ancho máximo al 80% del ancho de la pantalla si no se especifica
+        if w_max is None:
+            w_max = int(self.ANCHO * 0.8)
+
+        palabras = texto.split()
+        lineas = []
+        linea_actual = ""
+        for palabra in palabras:
+            test_linea = linea_actual + (" " if linea_actual else "") + palabra
+            ancho, _ = fuente.size(test_linea)
+            if ancho > w_max and linea_actual:
+                lineas.append(linea_actual)
+                linea_actual = palabra
+            else:
+                linea_actual = test_linea
+        if linea_actual:
+            lineas.append(linea_actual)
+
+        for i, linea in enumerate(lineas):
+            self.mostrar_texto(
+                linea,
+                x=x,
+                y=y + i * line_height,
+                w=w_max,
+                h=line_height,
+                fuente=fuente,
+                color=color,
+                centrado=centrado
+            )

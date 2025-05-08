@@ -2,9 +2,8 @@ import pygame
 import random
 import os
 from games.cards import dibujar_carta_generica
-from games.victory import mostrar_victoria
-from ui.utils import Boton  # Cambiado de Boton_Images a Boton
 from core.juego_base import JuegoBase
+from ui.utils import Boton  # <-- Añade esta línea
 
 IMG_PATH = os.path.join("assets", "imagenes")
 SND_PATH = os.path.join("assets", "sonidos")
@@ -27,18 +26,10 @@ class JuegoMemoriaJurasica(JuegoBase):
         "Difícil": {"nivel": "Avanzado", "pares": 10, "filas": 4, "columnas": 5},
     }
 
-    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds,return_to_menu=None):
-        super().__init__('Memoria Jurasica', pantalla, config, dificultad, fondo, navbar, images, sounds,return_to_menu)
-        self.pantalla = pantalla
-        self.config = config
-        self.fondo = fondo
-        self.navbar = navbar
-        self.images = images
-        self.sounds = sounds
+    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu=None):
+        super().__init__('Memoria Jurasica', pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
 
-        # Fuentes y colores
-        self.font = pygame.font.SysFont("Segoe UI", 34, bold=True)
-        self.font_small = pygame.font.SysFont("Segoe UI", 22)
+        # Colores y fuentes (usa las de JuegoBase si quieres unificar)
         self.color_fondo = (245, 240, 230)
         self.color_titulo = (80, 0, 80)
         self.color_info = (30, 30, 30)
@@ -149,15 +140,10 @@ class JuegoMemoriaJurasica(JuegoBase):
         return operaciones
 
     def handle_event(self, event):
+        # Usa la lógica base para salir y resize
+        super().handle_event(event)
         if event.type == pygame.QUIT:
             self.running = False
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if self.return_to_menu:
-                self.return_to_menu()
-        elif event.type == pygame.VIDEORESIZE:
-            self.pantalla = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-            if hasattr(self.fondo, "resize"):
-                self.fondo.resize(event.w, event.h)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if self.btn_silencio_rect and self.btn_silencio_rect.collidepoint(event.pos):
                 self.silenciado = not self.silenciado
@@ -224,12 +210,14 @@ class JuegoMemoriaJurasica(JuegoBase):
                 if self.pares_encontrados >= self.total_pares:
                     self.nivel_completado = True
 
-    def dibujar(self):
-        self.fondo.update(1)
-        self.fondo.draw(self.pantalla)
-        self.logo = self.images.get("dino4")
+    def draw(self, surface=None):
+        pantalla = surface if surface else self.pantalla
+        self.pantalla = pantalla  # Para mantener consistencia interna
 
-        navbar_height = self.navbar.height if hasattr(self.navbar, "height") else 60
+        # Fondo y navbar
+        self.dibujar_fondo()
+
+        navbar_height = self.navbar_height if hasattr(self, "navbar_height") else 60
         info_top = navbar_height + 10
 
         # --- Fondo info y título debajo de la barra ---
@@ -239,19 +227,18 @@ class JuegoMemoriaJurasica(JuegoBase):
             (20, info_top, self.pantalla.get_width() - 40, info_height),
             border_radius=18
         )
-        txt = self.font.render(f"Memoria Jurásica - {self.nivel_actual}", True, self.color_titulo)
-        self.pantalla.blit(
-            txt,
-            (self.pantalla.get_width() // 2 - txt.get_width() // 2, info_top + 8)
+        self.mostrar_texto(
+            f"Memoria Jurásica - {self.nivel_actual}",
+            x=0,
+            y=self.navbar_height + 28,  # Más espacio respecto a la navbar
+            w=self.pantalla.get_width(),
+            h=40,
+            fuente=self.fuente_titulo,
+            color=self.color_titulo,
+            centrado=True
         )
-
-        txt_info = self.font_small.render(
-            f"Pares: {self.pares_encontrados}/{self.total_pares}", True, self.color_info
-        )
-        self.pantalla.blit(
-            txt_info,
-            (self.pantalla.get_width() // 2 - txt_info.get_width() // 2, info_top + 40)
-        )
+       
+        
 
         # --- Calcular cuadrícula adaptativa ---
         num = len(self.cartas)
@@ -294,7 +281,7 @@ class JuegoMemoriaJurasica(JuegoBase):
             y = inicio_y + fila * (card_h + espacio_v)
             rect = dibujar_carta_generica(
                 self.pantalla, {**carta, "cartas_emparejadas": self.cartas_emparejadas},
-                x, y, card_w, card_h, self.font_small,
+                x, y, card_w, card_h, self.fuente,
                 (255, 255, 255), (0, 180, 0), (180, 0, 0), (0, 0, 120),
                 self.reverso, (80, 80, 80)
             )
@@ -302,21 +289,26 @@ class JuegoMemoriaJurasica(JuegoBase):
 
         # --- Mensaje temporal ---
         if self.mensaje and pygame.time.get_ticks() - self.tiempo_mensaje < 1200:
-            txt_msg = self.font_small.render(self.mensaje, True, (0, 120, 0))
-            self.pantalla.blit(
-                txt_msg,
-                (self.pantalla.get_width() // 2 - txt_msg.get_width() // 2, info_top + info_height + 10)
+            self.mostrar_texto(
+                self.mensaje,
+                x=0,
+                y=info_top + info_height + 10,
+                w=self.pantalla.get_width(),
+                h=30,
+                fuente=self.fuente,
+                color=(0, 120, 0),
+                centrado=True
             )
         elif self.mensaje:
             self.mensaje = ""
 
         # --- Victoria ---
         if self.nivel_completado:
-            mostrar_victoria(
+            self.mostrar_victoria(
                 self.pantalla,
                 lambda v: v, lambda v: v, self.pantalla.get_width(), self.pantalla.get_height(),
-                self.font, self.font_small,
-                {"pantalla": self.pantalla}, self.carta_rects
+                self.fuente_titulo, self.fuente,
+                self, self.carta_rects
             )
 
         # --- Botón de silenciar ---
@@ -341,7 +333,5 @@ class JuegoMemoriaJurasica(JuegoBase):
         btn_silencio.draw(self.pantalla)
         self.btn_silencio_rect = btn_silencio.rect
 
-    def draw(self, surface=None):
-        pantalla = surface if surface else self.pantalla
-        self.pantalla = pantalla  # Para mantener consistencia interna
-        self.dibujar()
+        # --- Puntaje ---
+        self.mostrar_puntaje(self.pares_encontrados, self.total_pares, "Pares")
