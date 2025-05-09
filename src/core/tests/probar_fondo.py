@@ -1,5 +1,5 @@
 import pygame
-from background import FondoAnimado
+from core.decoration.background import FondoAnimado
 
 ANCHO, ALTO = 800, 600
 

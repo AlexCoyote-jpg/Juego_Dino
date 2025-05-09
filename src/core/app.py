@@ -4,7 +4,7 @@ import os
 import pygame
 from core.config import load_config
 from core.resources import load_images, load_sounds
-from core.background import FondoAnimado
+from core.decoration.background import FondoAnimado
 from ui.menu_principal import run_menu_principal
 
 def run_app(debug=False):

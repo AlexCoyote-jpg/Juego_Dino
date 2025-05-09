@@ -11,7 +11,7 @@ from ui.screen_manager import (
     HomeScreen
 )
 from games.mi_juego import MiJuego
-from core.background import FondoAnimado
+from core.decoration.background import FondoAnimado
 from ui.navigation_bar import NavigationBar
 from games import JUEGOS_DISPONIBLES
 
