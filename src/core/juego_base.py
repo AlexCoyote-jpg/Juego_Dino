@@ -40,7 +40,9 @@ PALETA = [
 
 class JuegoBase:
     def __init__(self, nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
-        # --- Integración con el menú principal ---
+        """
+        Clase base para juegos. Proporciona utilidades y estructura común.
+        """
         self.nombre = nombre
         self.pantalla = pantalla
         self.config = config
@@ -66,15 +68,24 @@ class JuegoBase:
         # --- Actualiza el título de la ventana ---
         pygame.display.set_caption(f"{self.nombre} - {self.dificultad}")
 
+        # --- Inicializa lista de botones de opciones ---
+        self.opcion_botones = []
+
     def _nivel_from_dificultad(self, dificultad):
+        """
+        Traduce la dificultad a un nivel textual.
+        """
         if dificultad == "Fácil":
             return "Básico"
         elif dificultad == "Normal":
             return "Medio"
         else:
-            return "Avanzado"    
+            return "Avanzado"
 
     def _update_navbar_height(self):
+        """
+        Actualiza la altura de la barra de navegación si existe.
+        """
         if self.navbar and hasattr(self.navbar, "get_height"):
             self.navbar_height = self.navbar.get_height()
         elif self.navbar and hasattr(self.navbar, "height"):
@@ -83,17 +94,17 @@ class JuegoBase:
             self.navbar_height = 60  # Valor por defecto
 
     def cargar_imagenes(self):
-        # Para ser sobrescrito por cada juego si necesita cargar imágenes
+        """Para ser sobrescrito por cada juego si necesita cargar imágenes."""
         pass
 
     def dibujar_fondo(self):
-        # Dibuja el fondo respetando la barra de navegación
+        """Dibuja el fondo respetando la barra de navegación."""
         if self.pantalla:
             self.pantalla.fill((255, 255, 255))
             # Puedes dibujar aquí un área reservada para la navbar si lo deseas
-            
 
     def mostrar_texto(self, texto, x, y, w, h, fuente=None, color=(30,30,30), centrado=False):
+        """Muestra texto adaptativo en pantalla."""
         fuente = fuente or self.fuente
         mostrar_texto_adaptativo(
             pantalla=self.pantalla,
@@ -125,7 +136,6 @@ class JuegoBase:
         """
         Muestra el puntaje en la parte inferior izquierda en una caja bonita con emojis.
         """
-        # Dimensiones y posición responsiva
         ancho_caja = max(180, int(self.ANCHO * 0.18))
         alto_caja = max(48, int(self.ALTO * 0.07))
         x = 18
@@ -144,23 +154,23 @@ class JuegoBase:
         )
 
     def generar_opciones(self, respuesta: int, cantidad: int = 3) -> list[int]:
-        """Genera opciones aleatorias alrededor de la respuesta correcta, sin duplicados ni negativos."""
+        """
+        Genera opciones aleatorias alrededor de la respuesta correcta, sin duplicados ni negativos.
+        Mejorada para evitar bucles infinitos y asegurar variedad.
+        """
         opciones = {respuesta}
-        intentos = 0
-        while len(opciones) < cantidad and intentos < 50:
-            desplazamiento = random.choice([-1, 1]) * random.randint(1, 5)
-            op = respuesta + desplazamiento
-            if op >= 0:
-                opciones.add(op)
-            intentos += 1
-        # Si no se lograron suficientes opciones, agrega valores consecutivos positivos
+        posibles = set(range(max(0, respuesta - 10), respuesta + 11)) - {respuesta}
+        while len(opciones) < cantidad and posibles:
+            op = random.choice(list(posibles))
+            opciones.add(op)
+            posibles.remove(op)
         while len(opciones) < cantidad:
-            op = respuesta + random.randint(1, 10)
+            op = respuesta + random.randint(1, 20)
             opciones.add(op)
         resultado = list(opciones)
         random.shuffle(resultado)
         return resultado
-    
+
     def dibujar_opciones(
         self,
         opciones=None,
@@ -173,18 +183,13 @@ class JuegoBase:
     ):
         """
         Dibuja botones de opciones de forma responsiva, colorida y reutilizable.
-        - opciones: lista de valores a mostrar (por defecto self.opciones)
-        - tooltips: lista de tooltips (opcional)
-        - estilo: estilo de botón ('flat', 'apple', etc.)
-        - border_radius: radio de borde para botones
-        - x0, y0: posición inicial opcional (si no se pasa, se centra)
-        - espacio: espacio horizontal entre botones
         """
-        opciones = opciones if opciones is not None else self.opciones
+        opciones = opciones if opciones is not None else getattr(self, "opciones", [])
+        if not opciones:
+            return  # No dibujar si no hay opciones
         cnt = len(opciones)
         w = max(100, min(180, self.ANCHO // (cnt * 2)))
         h = max(50, min(80, self.ALTO // 12))
-        # Centrado automático si no se pasa x0/y0
         if x0 is None:
             x0 = (self.ANCHO - (w * cnt + espacio * (cnt - 1))) // 2
         if y0 is None:
@@ -212,10 +217,11 @@ class JuegoBase:
             btn.draw(self.pantalla, tooltip_manager=getattr(self, "tooltip_manager", None))
             self.opcion_botones.append(btn)
 
-    @staticmethod    
+    @staticmethod
     def color_complementario(rgb):
-            # Complementario simple: 255 - componente
-            return tuple(255 - c for c in rgb)
+        """Devuelve el color complementario."""
+        return tuple(255 - c for c in rgb)
+
     @staticmethod
     def mostrar_victoria(
         pantalla, sx, sy, ancho, alto, fuente_titulo, fuente_texto, juego_base, carta_rects,
