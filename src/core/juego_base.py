@@ -71,6 +71,10 @@ class JuegoBase:
         # --- Inicializa lista de botones de opciones ---
         self.opcion_botones = []
 
+        # --- Mensaje temporal ---
+        self.mensaje = ""
+        self.tiempo_mensaje = 0
+
     def _nivel_from_dificultad(self, dificultad):
         """
         Traduce la dificultad a un nivel textual.
@@ -304,3 +308,29 @@ class JuegoBase:
         else:
             mensaje = random.choice(mensajes_incorrecto).format(respuesta=respuesta_correcta)
         self.mostrar_mensaje_temporal(mensaje)
+
+    def mostrar_mensaje_temporal(self, mensaje, tiempo=60):
+        """Activa un mensaje temporal de feedback para mostrar en pantalla."""
+        self.mensaje = mensaje
+        self.tiempo_mensaje = tiempo
+
+    def dibujar_feedback(self):
+        """Dibuja el mensaje de feedback si está activo."""
+        if self.tiempo_mensaje > 0 and self.mensaje:
+            color_msg = (152, 251, 152) if any(x in self.mensaje for x in ["Correcto", "¡Excelente!", "Muy bien", "Genial", "FELICIDADES", "Victoria"]) else (255, 182, 193)
+            ancho = 500
+            alto = 50
+            x = self.ANCHO // 2 - ancho // 2
+            y = self.ALTO - 180
+            dibujar_caja_texto(self.pantalla, x, y, ancho, alto, color_msg)
+            self.mostrar_texto(
+                self.mensaje,
+                x=x,
+                y=y,
+                w=ancho,
+                h=alto,
+                fuente=self.fuente,
+                color=(30, 30, 30),
+                centrado=True
+            )
+            self.tiempo_mensaje -= 1

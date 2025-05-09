@@ -156,18 +156,10 @@ class JuegoLogico(JuegoBase):
             self.pantalla.blit(mapa_small, (x_map, y_map))
 
         # feedback
-        if self.tiempo_mensaje > 0:
-            mostrar_texto_adaptativo(self.pantalla,
-                                     f"{self.mensaje}\n{self.explicacion}",
-                                     x=20, y=int(self.ALTO*0.5),
-                                     w=self.ANCHO-40, h=int(self.ALTO*0.25),
-                                     fuente_base=self.fuente, centrado=True)
+        self.dibujar_feedback()
+
         # puntaje y navbar
         self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntaje")
-        if self.navbar:
-            self.navbar.draw(self.pantalla, self.images.get("dino_logo"))
 
 
-    def mostrar_mensaje_temporal(self, mensaje):
-        self.mensaje = mensaje
-        self.tiempo_mensaje = 90
+        

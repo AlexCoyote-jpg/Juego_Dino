@@ -121,20 +121,7 @@ class JuegoSumaResta(JuegoBase):
         self.dibujar_opciones(y0=y_btn)
 
         # Feedback y puntaje
-        if self.tiempo_mensaje > 0:
-            color_msg = (152, 251, 152) if "Correcto" in self.mensaje else (255, 182, 193)
-            dibujar_caja_texto(self.pantalla, self.ANCHO//2 - 250, self.ALTO - 180, 500, 50, color_msg)
-            self.mostrar_texto(
-                self.mensaje,
-                x=self.ANCHO//2 - 250,
-                y=self.ALTO - 180,
-                w=500,
-                h=50,
-                fuente=self.fuente,
-                color=(30, 30, 30),
-                centrado=True
-            )
-            self.tiempo_mensaje -= 1
+        self.dibujar_feedback()
         self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, frase="Puntuación")
 
     def handle_event(self, evento):
