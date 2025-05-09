@@ -194,6 +194,116 @@ class JuegoBase:
         self.ui_elements = {}
         self.init_responsive_ui()
 
+        # --- Racha ---
+        self.racha_correctas = 0
+        self.mejor_racha = 0
+
+        # --- Operación actual (para mostrar junto al problema) ---
+        self.operacion_actual = ""
+
+        # --- Animación de estrellas ---
+        self.estrellas = []
+        self.estrella_img = None
+        self.tiempo_animacion = 0
+        self.animacion_activa = False
+
+    def crear_estrella_img(self, tamaño=None, color=(255, 215, 0)):
+        """Crea una imagen de estrella para efectos de celebración"""
+        tamaño = tamaño or self.sy(15)
+        import math
+        img = pygame.Surface((tamaño, tamaño), pygame.SRCALPHA)
+        puntos = []
+        for i in range(5):
+            ang = math.pi/2 + i * 2*math.pi/5
+            puntos.append((
+                tamaño//2 + int(tamaño//2 * math.cos(ang)),
+                tamaño//2 - int(tamaño//2 * math.sin(ang))
+            ))
+            ang += math.pi/5
+            puntos.append((
+                tamaño//2 + int(tamaño//5 * math.cos(ang)),
+                tamaño//2 - int(tamaño//5 * math.sin(ang))
+            ))
+        pygame.draw.polygon(img, color, puntos)
+        return img
+
+    def crear_efecto_estrellas(self, posicion, cantidad=5):
+        """Crea estrellas para celebrar una respuesta correcta"""
+        import random, math
+        x, y = posicion
+        if not self.estrella_img:
+            self.estrella_img = self.crear_estrella_img()
+        for _ in range(cantidad):
+            angulo = random.uniform(0, 2 * math.pi)
+            distancia = random.uniform(self.sy(30), self.sy(100))
+            estrella_x = x + math.cos(angulo) * distancia
+            estrella_y = y + math.sin(angulo) * distancia
+            escala = random.uniform(0.7, 1.3)
+            rotacion = random.uniform(0, 360)
+            vida = random.randint(40, 80)
+            self.estrellas.append({
+                'x': estrella_x, 'y': estrella_y,
+                'escala': escala, 'rotacion': rotacion,
+                'vida': vida, 'max_vida': vida
+            })
+        self.animacion_activa = True
+        self.tiempo_animacion = 60
+
+    def update_animacion_estrellas(self):
+        for s in self.estrellas[:]:
+            s['rotacion'] += 2
+            s['vida'] -= 1
+            if s['vida'] <= 0:
+                self.estrellas.remove(s)
+        if self.animacion_activa:
+            self.tiempo_animacion -= 1
+            if self.tiempo_animacion <= 0:
+                self.animacion_activa = False
+
+    def draw_animacion_estrellas(self):
+        if not self.estrella_img:
+            self.estrella_img = self.crear_estrella_img()
+        for s in self.estrellas:
+            opacidad = int(255 * (s['vida'] / s['max_vida']))
+            img_rotada = pygame.transform.rotozoom(
+                self.estrella_img,
+                s['rotacion'],
+                s['escala']
+            )
+            img_rotada.set_alpha(opacidad)
+            rect = img_rotada.get_rect(center=(s['x'], s['y']))
+            self.pantalla.blit(img_rotada, rect)
+
+    def mostrar_racha(self, rect=None):
+        """Muestra la racha actual y la mejor racha en pantalla."""
+        if rect is None:
+            rect = (self.ANCHO - self.sx(200), self.ALTO - self.sy(70), self.sx(180), self.sy(50))
+        dibujar_caja_texto(
+            self.pantalla,
+            rect[0], rect[1], rect[2], rect[3],
+            color=(255, 240, 200, 220),
+            radius=self.sy(10),
+            texto=f"🔥 Racha: {self.racha_correctas} (Mejor: {self.mejor_racha})",
+            fuente=obtener_fuente(self.sf(18)),
+            color_texto=(100, 50, 0)
+        )
+
+    def mostrar_operacion(self, rect=None):
+        """Muestra la operación matemática actual."""
+        if not self.operacion_actual:
+            return
+        if rect is None:
+            rect = (self.ANCHO - self.sx(200), self.navbar_height + self.sy(50), self.sx(180), self.sy(40))
+        dibujar_caja_texto(
+            self.pantalla,
+            rect[0], rect[1], rect[2], rect[3],
+            color=(240, 240, 255, 220),
+            radius=self.sy(10),
+            texto=self.operacion_actual,
+            fuente=obtener_fuente(self.sf(20), negrita=True),
+            color_texto=(50, 50, 120)
+        )
+
     def init_responsive_ui(self):
         """
         Inicializa elementos de UI responsivos.
@@ -474,18 +584,26 @@ class JuegoBase:
         pass
 
     def update(self, dt=None):
+        # Actualizar animación de estrellas
+        self.update_animacion_estrellas()
         # Para ser sobrescrito por cada juego
         pass
 
     def draw(self, surface):
+        # Dibujar animación de estrellas
+        self.draw_animacion_estrellas()
         # Para ser sobrescrito por cada juego
         pass
 
     def mostrar_feedback(self, es_correcto, respuesta_correcta=None):
         if es_correcto:
             mensaje = random.choice(mensajes_correcto)
+            self.racha_correctas += 1
+            self.mejor_racha = max(self.mejor_racha, self.racha_correctas)
+            self.crear_efecto_estrellas((self.ANCHO // 2, self.ALTO // 2))
         else:
             mensaje = random.choice(mensajes_incorrecto).format(respuesta=respuesta_correcta)
+            self.racha_correctas = 0
         self.mostrar_mensaje_temporal(mensaje)
 
     def mostrar_mensaje_temporal(self, mensaje, tiempo=60):
@@ -581,6 +699,12 @@ class JuegoEjemplo(JuegoBase):
         
         # Dibujar puntaje
         self.mostrar_puntaje(self.puntuacion, self.total_preguntas)
+        
+        # Dibujar racha
+        self.mostrar_racha()
+        
+        # Dibujar operación actual
+        self.mostrar_operacion()
         
         # Dibujar feedback si existe
         self.dibujar_feedback()
