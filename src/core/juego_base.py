@@ -25,6 +25,18 @@ mensajes_incorrecto = [
     "¡Casi! Sigue practicando 💪",
     "¡Ánimo! Dino confía en ti 🦖"
 ]
+PALETA = [
+            (244, 67, 54),    # rojo
+            (233, 30, 99),    # rosa
+            (156, 39, 176),   # púrpura
+            (63, 81, 181),    # índigo
+            (33, 150, 243),   # azul claro
+            (0, 188, 212),    # cian
+            (0, 150, 136),    # teal
+            (76, 175, 80),    # verde
+            (255, 235, 59),   # amarillo
+            (255, 152, 0),    # naranja
+        ]
 
 class JuegoBase:
     def __init__(self, nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
@@ -130,6 +142,76 @@ class JuegoBase:
             fuente=self.fuente,
             color_texto=(30, 60, 90)
         )
+
+    def generar_opciones(self, respuesta: int, cantidad: int = 3) -> list[int]:
+        """Genera opciones aleatorias alrededor de la respuesta correcta, sin duplicados ni negativos."""
+        opciones = {respuesta}
+        intentos = 0
+        while len(opciones) < cantidad and intentos < 50:
+            desplazamiento = random.choice([-1, 1]) * random.randint(1, 5)
+            op = respuesta + desplazamiento
+            if op >= 0:
+                opciones.add(op)
+            intentos += 1
+        # Si no se lograron suficientes opciones, agrega valores consecutivos positivos
+        while len(opciones) < cantidad:
+            op = respuesta + random.randint(1, 10)
+            opciones.add(op)
+        resultado = list(opciones)
+        random.shuffle(resultado)
+        return resultado
+    
+    def dibujar_opciones(
+        self,
+        opciones=None,
+        tooltips=None,
+        estilo="flat",
+        border_radius=12,
+        x0=None,
+        y0=None,
+        espacio=20
+    ):
+        """
+        Dibuja botones de opciones de forma responsiva, colorida y reutilizable.
+        - opciones: lista de valores a mostrar (por defecto self.opciones)
+        - tooltips: lista de tooltips (opcional)
+        - estilo: estilo de botón ('flat', 'apple', etc.)
+        - border_radius: radio de borde para botones
+        - x0, y0: posición inicial opcional (si no se pasa, se centra)
+        - espacio: espacio horizontal entre botones
+        """
+        opciones = opciones if opciones is not None else self.opciones
+        cnt = len(opciones)
+        w = max(100, min(180, self.ANCHO // (cnt * 2)))
+        h = max(50, min(80, self.ALTO // 12))
+        # Centrado automático si no se pasa x0/y0
+        if x0 is None:
+            x0 = (self.ANCHO - (w * cnt + espacio * (cnt - 1))) // 2
+        if y0 is None:
+            y0 = self.ALTO // 2 - h // 2
+        paleta = PALETA[:cnt] if cnt <= len(PALETA) else PALETA * (cnt // len(PALETA)) + PALETA[:cnt % len(PALETA)]
+
+        self.opcion_botones.clear()
+        for i, val in enumerate(opciones):
+            color_bg = paleta[i % len(paleta)]
+            color_hover = self.color_complementario(color_bg)
+            lum = 0.299 * color_bg[0] + 0.587 * color_bg[1] + 0.114 * color_bg[2]
+            color_texto = (0, 0, 0) if lum > 180 else (255, 255, 255)
+            x = x0 + i * (w + espacio)
+            btn = Boton(
+                texto=str(val),
+                x=x, y=y0, ancho=w, alto=h,
+                fuente=self.fuente,
+                color_normal=color_bg,
+                color_hover=color_hover,
+                color_texto=color_texto,
+                border_radius=border_radius,
+                estilo=estilo,
+                tooltip=tooltips[i] if tooltips and i < len(tooltips) else None
+            )
+            btn.draw(self.pantalla, tooltip_manager=getattr(self, "tooltip_manager", None))
+            self.opcion_botones.append(btn)
+
     @staticmethod    
     def color_complementario(rgb):
             # Complementario simple: 255 - componente
