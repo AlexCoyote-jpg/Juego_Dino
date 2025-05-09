@@ -2,7 +2,7 @@ import pygame
 import random
 import math
 from pygame.locals import *
-from ui.utils import mostrar_texto_adaptativo, dibujar_caja_texto, Boton , obtener_fuente
+from ui.components.utils import mostrar_texto_adaptativo, dibujar_caja_texto, Boton , obtener_fuente
 from core.juego_base import JuegoBase , PALETA
 
 class JuegoLogico(JuegoBase):

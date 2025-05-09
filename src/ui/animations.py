@@ -33,7 +33,7 @@ def elementos(caja, juego, recursos, cx, cy, tam_caja, fuente):
         img_y = cy + padding
         caja.blit(img_scaled, (img_x, img_y))
 
-    from ui.utils import mostrar_texto_adaptativo
+    from ui.components.utils import mostrar_texto_adaptativo
     mostrar_texto_adaptativo(
         caja,
         juego["nombre"],
@@ -45,7 +45,7 @@ def elementos(caja, juego, recursos, cx, cy, tam_caja, fuente):
     )
 
 def renderizar_celda(caja, juego, recursos, fuente, x, y, tam, color, radio):
-    from ui.utils import dibujar_caja_texto
+    from ui.components.utils import dibujar_caja_texto
     dibujar_caja_texto(caja, x, y, tam, tam, color=color, radius=radio)
     elementos(caja, juego, recursos, x, y, tam, fuente)
 

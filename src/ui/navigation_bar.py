@@ -2,7 +2,7 @@
 import pygame
 import os
 from functools import lru_cache
-from .utils import Boton, TooltipManager
+from .components.utils import Boton, TooltipManager
 from .animations import get_surface
 
 class NavigationBar:

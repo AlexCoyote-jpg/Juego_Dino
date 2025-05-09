@@ -4,7 +4,7 @@ import random
 import math
 from pygame.locals import *
 from core.juego_base import JuegoBase  # Asegúrate de que la ruta sea correcta
-from ui.utils import obtener_fuente, dibujar_caja_texto, mostrar_texto_adaptativo
+from ui.components.utils import obtener_fuente, dibujar_caja_texto, mostrar_texto_adaptativo
 
 def generar_problema_multiplicacion(nivel):
     """Genera un problema de multiplicación según el nivel"""

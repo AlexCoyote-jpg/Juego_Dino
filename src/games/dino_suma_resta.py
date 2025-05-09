@@ -1,7 +1,7 @@
 import pygame
 import random
 import sys
-from ui.utils import Boton, dibujar_caja_texto, mostrar_texto_adaptativo
+from ui.components.utils import Boton, dibujar_caja_texto, mostrar_texto_adaptativo
 from ui.navigation_bar import NavigationBar
 from core.juego_base import JuegoBase, PALETA
 

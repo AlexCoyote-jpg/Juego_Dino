@@ -2,8 +2,8 @@
 Pantalla de victoria y botón para avanzar de nivel.
 """
 import pygame
-from ui.utils import mostrar_texto_adaptativo, Boton
-from ui.Emojis import mostrar_alternativo_adaptativo
+from ui.components.utils import mostrar_texto_adaptativo, Boton
+from ui.components.emoji import mostrar_alternativo_adaptativo
 
 def mostrar_victoria(
     pantalla, sx, sy, ancho, alto, fuente_titulo, fuente_texto, juego_base, carta_rects,

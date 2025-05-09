@@ -2,7 +2,7 @@
 Funciones para dibujar cartas genéricas del juego de memoria.
 """
 import pygame
-from ui.utils import dibujar_caja_texto, mostrar_texto_adaptativo
+from ui.components.utils import dibujar_caja_texto, mostrar_texto_adaptativo
 
 def dibujar_carta_generica(
     pantalla, carta, x, y, ancho, alto, fuente, color_texto, color_acierto, color_error, color_borde, img_reverso, color_borde_reverso

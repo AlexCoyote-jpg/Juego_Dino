@@ -1,10 +1,10 @@
 import pygame
 import random
-from ui.utils import (
+from ui.components.utils import (
     mostrar_texto_adaptativo, Boton, obtener_fuente, render_text_cached,
     dibujar_caja_texto, TooltipManager
 )
-from ui.Emojis import mostrar_alternativo_adaptativo
+from ui.components.emoji import mostrar_alternativo_adaptativo
 
 # Ejemplos para mostrar en mostrar_mensaje_temporal o donde corresponda
 

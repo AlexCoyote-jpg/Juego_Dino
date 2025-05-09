@@ -3,7 +3,7 @@ import sys
 import random
 from pygame.locals import *
 from core.juego_base import JuegoBase  # Usa tu base común
-from ui.utils import obtener_fuente
+from ui.components.utils import obtener_fuente
 # Si tienes imágenes, importa/carga aquí
 
 def generar_problema_division(nivel):

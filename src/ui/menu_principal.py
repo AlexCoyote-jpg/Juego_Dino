@@ -6,8 +6,8 @@ import time
 import random
 from ui.navigation_bar import NavigationBar
 from ui.animations import animar_dinos, dibujar_caja_juegos
-from ui.utils import Boton, dibujar_caja_texto, mostrar_texto_adaptativo,TooltipManager
-from ui.Emojis import mostrar_alternativo_adaptativo
+from ui.components.utils import Boton, dibujar_caja_texto, mostrar_texto_adaptativo,TooltipManager
+from ui.components.emoji import mostrar_alternativo_adaptativo
 from core.game_state import *
 from games import JUEGOS_DISPONIBLES
 from ui.screen_manager import (

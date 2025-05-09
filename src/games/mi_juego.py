@@ -1,6 +1,6 @@
 import pygame
 from core.juego_base import JuegoBase
-from ui.utils import Boton
+from ui.components.utils import Boton
 
 class MiJuego(JuegoBase):
     def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):

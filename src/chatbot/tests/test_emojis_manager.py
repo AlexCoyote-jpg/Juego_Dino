@@ -1,6 +1,6 @@
 import pygame
 from chatbot.chatbot_state import ChatbotStateManager
-from ui.Emojis import mostrar_alternativo_adaptativo
+from ui.Funcionalidad.Emojis import mostrar_alternativo_adaptativo
 
 # Inicializar Pygame y pantalla
 pygame.init()

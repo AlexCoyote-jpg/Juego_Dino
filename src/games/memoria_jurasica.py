@@ -3,7 +3,7 @@ import random
 import os
 from games.cards import dibujar_carta_generica
 from core.juego_base import JuegoBase
-from ui.utils import Boton  # <-- Añade esta línea
+from ui.components.utils import Boton  # <-- Añade esta línea
 
 IMG_PATH = os.path.join("assets", "imagenes")
 SND_PATH = os.path.join("assets", "sonidos")
