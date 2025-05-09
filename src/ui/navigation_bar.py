@@ -133,7 +133,8 @@ class NavigationBar:
             if i == self.selected:
                 color_top, color_bottom = colores[i % len(colores)]
                 color_texto = txt_color_sel
-                border_color = (68, 68, 78, 32)  # Sombra muy ligera
+                #border_color = (68, 68, 78, 32)  # Sombra muy ligera
+                border_color = False
                 estilo = "apple"
                 text_alpha = 255
             else:
