@@ -4,6 +4,27 @@ import random
 from pygame.locals import *
 from funciones_apoyo import *
 
+def generar_problema_division(nivel):
+    """Genera un problema de división según el nivel"""
+    if nivel == "Básico":
+        b = random.randint(1, 5)
+        a = b * random.randint(1, 5)
+        problema = f"Dino tiene {a} bayas. Si las reparte en {b} grupos iguales, ¿cuántas bayas habrá en cada grupo?"
+        respuesta = a // b
+    elif nivel == "Medio":
+        b = random.randint(2, 5)
+        a = b * random.randint(3, 8)
+        problema = f"Dino tiene {a} bayas y quiere repartirlas entre {b} amigos. ¿Cuántas bayas recibirá cada amigo?"
+        respuesta = a // b
+    else:  # Avanzado
+        b = random.randint(3, 6)
+        a = b * random.randint(5, 10)
+        c = random.randint(1, 3)
+        problema = f"Dino tiene {a} bayas. Si las reparte en {b} grupos iguales y luego come {c} de un grupo, ¿cuántas bayas le quedan en ese grupo?"
+        respuesta = (a // b) - c
+    
+    return problema, respuesta
+
 class JuegoRescate(JuegoBase):
     def __init__(self):
         super().__init__('Rescate Jurásico')

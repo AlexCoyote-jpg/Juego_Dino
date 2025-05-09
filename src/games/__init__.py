@@ -4,6 +4,7 @@
 
 from .dino_suma_resta import JuegoSumaResta
 from .memoria_jurasica import JuegoMemoriaJurasica
+from .dino_cazador import JuegoCazadorNumeros
 from .Dino_Logico import JuegoLogico
 from .mi_juego import MiJuego
 # from .otro_juego import OtroJuego  # Descomenta y agrega más juegos aquí
@@ -11,7 +12,7 @@ from .mi_juego import MiJuego
 # Lista centralizada de juegos (opcional, para usar en el menú principal)
 JUEGOS_DISPONIBLES = [
     {"nombre": "Dino Sumas/Resta", "clase": JuegoSumaResta, "imagen": "dino1"},
-    {"nombre": "Dino Cazador", "clase": JuegoSumaResta, "imagen": "dino2"},
+    {"nombre": "Dino Cazador", "clase": JuegoCazadorNumeros, "imagen": "dino2"},
     {"nombre": "Dino Logico", "clase": JuegoLogico, "imagen": "dino3"},
     {"nombre": "Memoria Jurasica", "clase": JuegoMemoriaJurasica, "imagen": "dino4"},
     {"nombre": "Mi Juego", "clase": MiJuego, "imagen": "dino5"},
