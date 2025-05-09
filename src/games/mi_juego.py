@@ -34,6 +34,8 @@ class MiJuego(JuegoBase):
         self.dibujar_fondo()
         centro = (self.ANCHO // 2, self.ALTO // 2)
         pygame.draw.circle(surface, self.circulo_color, centro, self.circulo_radio)
+        self.mostrar_titulo()
+        ''' Mostrar texto de ejemplo
         self.mostrar_texto(
             "Redimensiona la ventana",
             x=self.ANCHO // 2 - 200,
@@ -42,6 +44,8 @@ class MiJuego(JuegoBase):
             h=48,
             fuente=self.fuente_titulo,
         )
+        '''
+        
         self.boton_salir.draw(surface)
         self.mostrar_puntaje(3, 15 , "hola")
         if self._salir_clicked:

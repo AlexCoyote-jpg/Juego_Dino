@@ -127,6 +127,7 @@ class JuegoLogico(JuegoBase):
 
     def draw(self, surface):
         self.dibujar_fondo()
+        self.mostrar_titulo()
         # problema
         mostrar_texto_adaptativo(self.pantalla, self.problema_actual,
                                  x=20, y=self.navbar_height+20,
@@ -157,7 +158,7 @@ class JuegoLogico(JuegoBase):
                 y_map = self.opcion_botones[-1].rect.bottom + 10
             else:
                 y_map = self.navbar_height + 10
-            x_map = (self.ANCHO - nuevo_map_w) // 2
+            x_map = self.ANCHO - nuevo_map_w - 20  # <-- margen derecho de 20px
             self.pantalla.blit(mapa_small, (x_map, y_map))
 
         # feedback
@@ -173,23 +174,46 @@ class JuegoLogico(JuegoBase):
             self.navbar.draw(self.pantalla, self.images.get("dino_logo"))
 
     def dibujar_opciones(self):
-        """Construye y dibuja botones para cada opción."""
-        colores = [(144,238,144),(173,216,230),(255,255,153),(255,182,193)]
+        """Construye y dibuja botones de colores vivos para cada opción con hover complementario."""
+        paleta = [
+            (244, 67, 54),    # rojo
+            (233, 30, 99),    # rosa
+            (156, 39, 176),   # púrpura
+            (63, 81, 181),    # índigo
+            (33, 150, 243),   # azul claro
+            (0, 188, 212),    # cian
+            (0, 150, 136),    # teal
+            (76, 175, 80),    # verde
+            (255, 235, 59),   # amarillo
+            (255, 152, 0),    # naranja
+        ]
         espacio = 20
-        w = max(100, min(180, self.ANCHO // (len(self.opciones) * 2)))
+        cnt = len(self.opciones)
+        w = max(100, min(180, self.ANCHO // (cnt * 2)))
         h = max(50, min(80, self.ALTO // 12))
-        x0 = (self.ANCHO - (w*4 + espacio*3)) // 2
-        y0 = self.ALTO//2 - h//2
+        x0 = (self.ANCHO - (w * cnt + espacio * (cnt - 1))) // 2
+        y0 = self.ALTO // 2 - h // 2
+
+        def color_complementario(rgb):
+            # Complementario simple: 255 - componente
+            return tuple(255 - c for c in rgb)
+
         self.opcion_botones.clear()
         for i, val in enumerate(self.opciones):
-            x = x0 + i*(w+espacio)
+            color_bg = paleta[i % len(paleta)]
+            color_hover = color_complementario(color_bg)
+            lum = 0.299 * color_bg[0] + 0.587 * color_bg[1] + 0.114 * color_bg[2]
+            color_texto = (0, 0, 0) if lum > 180 else (255, 255, 255)
+
+            x = x0 + i * (w + espacio)
             btn = Boton(
-                # firma correcta: texto, x, y, ancho, alto
                 texto=str(val),
                 x=x, y=y0, ancho=w, alto=h,
                 fuente=self.fuente,
-                color_normal=colores[i],    # antes color_bg
-                color_texto=(30,30,30)      # antes color_text
+                color_normal=color_bg,
+                color_hover=color_hover,
+                color_texto=color_texto,
+                estilo="flat"
             )
             btn.draw(self.pantalla, tooltip_manager=self.tooltip_manager)
             self.opcion_botones.append(btn)

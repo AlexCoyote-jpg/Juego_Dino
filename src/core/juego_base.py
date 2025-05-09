@@ -95,6 +95,19 @@ class JuegoBase:
             centrado=centrado
         )
 
+    def mostrar_titulo(self):
+        """Muestra el título del juego centrado debajo de la navbar."""
+        mostrar_texto_adaptativo(
+            pantalla=self.pantalla,
+            texto=f"{self.nombre} - Nivel {self.dificultad}",
+            x=0,
+            y=self.navbar_height + 30,
+            w=self.ANCHO,
+            h=60,
+            fuente_base=self.fuente_titulo,
+            color=(70, 130, 180),
+            centrado=True
+        )
 
     def mostrar_puntaje(self, juegos_ganados, juegos_totales, frase="¡Puntaje!"):
         """
