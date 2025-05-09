@@ -130,7 +130,10 @@ class JuegoBase:
             fuente=self.fuente,
             color_texto=(30, 60, 90)
         )
-
+    @staticmethod    
+    def color_complementario(rgb):
+            # Complementario simple: 255 - componente
+            return tuple(255 - c for c in rgb)
     @staticmethod
     def mostrar_victoria(
         pantalla, sx, sy, ancho, alto, fuente_titulo, fuente_texto, juego_base, carta_rects,

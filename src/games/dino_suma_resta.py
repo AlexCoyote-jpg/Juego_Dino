@@ -7,7 +7,6 @@ from core.juego_base import JuegoBase
 
 # Colores para botones de opciones
 VERDE_OPCIONES = (180, 240, 180)
-VERDE_OPCIONES_HOVER = (120, 200, 120)
 
 def generar_problema_suma_resta(nivel):
     """Genera un problema de suma o resta con enunciado temático según el nivel"""
@@ -16,20 +15,20 @@ def generar_problema_suma_resta(nivel):
         b = random.randint(1, min(10, a))
         operacion = random.choice(['+', '-'])
         if operacion == '+':
-            problema = f"Dino encontró {a} huevos en su cueva y luego encontró {b} más en el bosque. ¿Cuántos huevos tiene en total?"
+            problema = f"Dino encontró {a} huevos en su cueva y luego encontró {b} más en el bosque.\n ¿Cuántos huevos tiene en total?"
             respuesta = a + b
         else:
-            problema = f"Dino tenía {a} huevos y usó {b} para hacer una tortilla. ¿Cuántos huevos le quedan?"
+            problema = f"Dino tenía {a} huevos y usó {b} para hacer una tortilla.\n ¿Cuántos huevos le quedan?"
             respuesta = a - b
     elif nivel == "Medio":
         a = random.randint(10, 20)
         b = random.randint(1, min(15, a))
         operacion = random.choice(['+', '-'])
         if operacion == '+':
-            problema = f"Dino recolectó {a} frutas y luego encontró {b} más. ¿Cuántas frutas tiene ahora?"
+            problema = f"Dino recolectó {a} frutas y luego encontró {b} más.\n ¿Cuántas frutas tiene ahora?"
             respuesta = a + b
         else:
-            problema = f"Dino tenía {a} piedras y perdió {b} en el camino. ¿Cuántas piedras le quedan?"
+            problema = f"Dino tenía {a} piedras y perdió {b} en el camino.\n ¿Cuántas piedras le quedan?"
             respuesta = a - b
     else:  # Avanzado
         a = random.randint(10, 30)
@@ -37,13 +36,13 @@ def generar_problema_suma_resta(nivel):
         c = random.randint(1, 10)
         operacion = random.choice(['++', '+-', '-+'])
         if operacion == '++':
-            problema = f"Dino encontró {a} semillas, luego {b} más y después otras {c}. ¿Cuántas semillas tiene en total?"
+            problema = f"Dino encontró {a} semillas, luego {b} más y después otras {c}.\n ¿Cuántas semillas tiene en total?"
             respuesta = a + b + c
         elif operacion == '+-':
-            problema = f"Dino tenía {a} hojas, encontró {b} más pero el viento se llevó {c}. ¿Cuántas hojas tiene ahora?"
+            problema = f"Dino tenía {a} hojas, encontró {b} más pero el viento se llevó {c}.\n ¿Cuántas hojas tiene ahora?"
             respuesta = a + b - c
         else:
-            problema = f"Dino tenía {a} nueces, dio {b} a sus amigos y luego encontró {c} más. ¿Cuántas nueces tiene ahora?"
+            problema = f"Dino tenía {a} nueces, dio {b} a sus amigos y luego encontró {c} más.\n ¿Cuántas nueces tiene ahora?"
             respuesta = a - b + c
     return problema, respuesta
 
@@ -60,6 +59,7 @@ class JuegoSumaResta(JuegoBase):
     def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu=None):
         super().__init__('Dino Suma y Resta', pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
         self.nivel_actual = self._nivel_from_dificultad(dificultad)
+        print(f"Nivel actual: {self.nivel_actual}")
         self.puntuacion = 0
         self.jugadas_totales = 0
         self.tiempo_mensaje = 0
@@ -82,13 +82,6 @@ class JuegoSumaResta(JuegoBase):
         if self.piedrita:
             self.piedrita = pygame.transform.smoothscale(self.piedrita, (60, 60))
 
-    def _nivel_from_dificultad(self, dificultad):
-        if dificultad == "Fácil":
-            return "Básico"
-        elif dificultad == "Normal":
-            return "Medio"
-        else:
-            return "Avanzado"
 
     def generar_problema(self):
         self.problema_actual, self.respuesta_correcta = generar_problema_suma_resta(self.nivel_actual)
@@ -106,7 +99,7 @@ class JuegoSumaResta(JuegoBase):
             boton = Boton(
                 str(opcion), x, y_btn, 120, 70,
                 color_normal=VERDE_OPCIONES,
-                color_hover=VERDE_OPCIONES_HOVER,
+                color_hover=self.color_complementario(VERDE_OPCIONES),
                 color_texto=(30, 30, 30),
                 fuente=self.fuente,
                 border_radius=18,
@@ -119,7 +112,8 @@ class JuegoSumaResta(JuegoBase):
         try:
             # Fondo
             self.dibujar_fondo()
-            
+            self.mostrar_titulo()
+            '''
             # Título
             self.mostrar_texto(
                 f"Dino Suma y Resta - Nivel {self.nivel_actual}",
@@ -131,7 +125,7 @@ class JuegoSumaResta(JuegoBase):
                 color=(70, 130, 180),
                 centrado=True
             )
-            
+            '''
             # Problema (usando método más seguro)
             texto_problem_y = self.navbar_height + 95
             altura_caja = 80
@@ -238,40 +232,4 @@ class JuegoSumaResta(JuegoBase):
         self._ajustar_imagenes()
         self._init_opciones_botones()
 
-    def mostrar_texto_multilinea(self, texto, x, y, fuente, centrado=False, color=(30, 30, 30), line_height=None, w_max=None):
-        """
-        Sobrescribe para pasar los argumentos requeridos a mostrar_texto.
-        Además, ajusta el texto para que no se salga de la pantalla.
-        """
-        if line_height is None:
-            line_height = fuente.get_height() + 8
-
-        # Ajusta el ancho máximo al 80% del ancho de la pantalla si no se especifica
-        if w_max is None:
-            w_max = int(self.ANCHO * 0.8)
-
-        palabras = texto.split()
-        lineas = []
-        linea_actual = ""
-        for palabra in palabras:
-            test_linea = linea_actual + (" " if linea_actual else "") + palabra
-            ancho, _ = fuente.size(test_linea)
-            if ancho > w_max and linea_actual:
-                lineas.append(linea_actual)
-                linea_actual = palabra
-            else:
-                linea_actual = test_linea
-        if linea_actual:
-            lineas.append(linea_actual)
-
-        for i, linea in enumerate(lineas):
-            self.mostrar_texto(
-                linea,
-                x=x,
-                y=y + i * line_height,
-                w=w_max,
-                h=line_height,
-                fuente=fuente,
-                color=color,
-                centrado=centrado
-            )
+    

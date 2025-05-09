@@ -194,14 +194,12 @@ class JuegoLogico(JuegoBase):
         x0 = (self.ANCHO - (w * cnt + espacio * (cnt - 1))) // 2
         y0 = self.ALTO // 2 - h // 2
 
-        def color_complementario(rgb):
-            # Complementario simple: 255 - componente
-            return tuple(255 - c for c in rgb)
+        
 
         self.opcion_botones.clear()
         for i, val in enumerate(self.opciones):
             color_bg = paleta[i % len(paleta)]
-            color_hover = color_complementario(color_bg)
+            color_hover = self.color_complementario(color_bg)
             lum = 0.299 * color_bg[0] + 0.587 * color_bg[1] + 0.114 * color_bg[2]
             color_texto = (0, 0, 0) if lum > 180 else (255, 255, 255)
 
