@@ -54,6 +54,14 @@ class JuegoBase:
         # --- Actualiza el título de la ventana ---
         pygame.display.set_caption(f"{self.nombre} - {self.dificultad}")
 
+    def _nivel_from_dificultad(self, dificultad):
+        if dificultad == "Fácil":
+            return "Básico"
+        elif dificultad == "Normal":
+            return "Medio"
+        else:
+            return "Avanzado"    
+
     def _update_navbar_height(self):
         if self.navbar and hasattr(self.navbar, "get_height"):
             self.navbar_height = self.navbar.get_height()
@@ -71,6 +79,7 @@ class JuegoBase:
         if self.pantalla:
             self.pantalla.fill((255, 255, 255))
             # Puedes dibujar aquí un área reservada para la navbar si lo deseas
+            
 
     def mostrar_texto(self, texto, x, y, w, h, fuente=None, color=(30,30,30), centrado=False):
         fuente = fuente or self.fuente
@@ -86,12 +95,6 @@ class JuegoBase:
             centrado=centrado
         )
 
-    def mostrar_texto_multilinea(self, texto, x, y, fuente=None, centrado=False, line_height=36):
-        fuente = fuente or self.fuente
-        lineas = texto.split("\n")
-        y_actual = max(y, self.navbar_height)
-        for i, linea in enumerate(lineas):
-            self.mostrar_texto(linea, x, y_actual + i * line_height, fuente, centrado=centrado)
 
     def mostrar_puntaje(self, juegos_ganados, juegos_totales, frase="¡Puntaje!"):
         """

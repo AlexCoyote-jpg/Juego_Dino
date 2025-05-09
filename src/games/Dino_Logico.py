@@ -1,105 +1,37 @@
 import pygame
 import random
+import math
 from pygame.locals import *
-from ui.utils import Boton  # Usa la clase Boton para los botones de opciones
+from ui.utils import mostrar_texto_adaptativo, dibujar_caja_texto, Boton
+from core.juego_base import JuegoBase
 
-def generar_opciones(respuesta, min_diff=1, max_diff=3, cantidad=4):
-    """
-    Genera una lista de opciones (incluyendo la respuesta correcta) para preguntas de opción múltiple.
-    Evita duplicados y asegura que todas las opciones sean positivas y distintas.
-    """
-    opciones = set([respuesta])
-    intentos = 0
-    while len(opciones) < cantidad and intentos < 30:
-        delta = random.randint(min_diff, max_diff)
-        signo = random.choice([-1, 1])
-        opcion = respuesta + signo * delta
-        # Evita opciones negativas, duplicadas o cero
-        if opcion > 0 and opcion != respuesta:
-            opciones.add(opcion)
-        intentos += 1
-    # Si no se lograron suficientes opciones, rellena con valores positivos únicos
-    while len(opciones) < cantidad:
-        opciones.add(respuesta + random.randint(1, 10))
-    return list(opciones)
+class JuegoLogico(JuegoBase):
+    # Constantes de clase para reutilizar
+    NOMBRES = ["Rexy", "Trici", "Spike", "Dina", "Terry"]
+    OBJETOS = ["pasteles", "galletas", "helados", "caramelos"]
+    USEREVENT_SIGUIENTE = USEREVENT + 1
 
-class JuegoLogico:
     def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
-        # --- Integración con el menú principal ---
-        self.pantalla = pantalla
-        self.config = config
-        self.dificultad = dificultad
-        self.fondo = fondo
-        self.navbar = navbar
-        self.images = images
-        self.sounds = sounds
-        self.return_to_menu = return_to_menu
-
-        # --- Dimensiones y fuentes ---
-        self.ANCHO = pantalla.get_width()
-        self.ALTO = pantalla.get_height()
-        self.fuente_titulo = pygame.font.SysFont("Segoe UI", max(36, int(0.04 * pantalla.get_height())), bold=True)
-        self.fuente = pygame.font.SysFont("Segoe UI", max(20, int(0.025 * pantalla.get_height())))
-        self.reloj = pygame.time.Clock()
-
-        # --- Estado del juego ---
-        self.problema_actual = ""
-        self.opciones = []
-        self.respuesta_correcta = None
-        self.opciones_rects = []
-        self.boton_opciones = []  # Lista de botones de opciones
-        self.explicacion = ""
+        super().__init__("Dino Lógico", pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
+        # --- Carga de imágenes específicas del juego ---
+        self.cargar_imagenes()
+        # Estado del juego
+        self.nivel_actual = self._nivel_from_dificultad(dificultad)
         self.puntuacion = 0
         self.jugadas_totales = 0
         self.racha = 0
-        self.mensaje = ""
         self.tiempo_mensaje = 0
-        self.animacion_opcion = None
-        self.animacion_tiempo = 0
-
-        # --- Cargar imágenes ---
-        self.cargar_imagenes()
-
-        # --- Determinar nivel actual ---
-        self.nivel_actual = self._mapear_dificultad(dificultad)
-
-        # --- Generar primer problema ---
+        self.mensaje = ""
+        self.problema_actual = ""
+        self.respuesta_correcta = None
+        self.explicacion = ""
+        self.opcion_botones: list[Boton] = []
         self.generar_problema()
 
-    def _mapear_dificultad(self, dificultad):
-        if dificultad == "Fácil":
-            return "Básico"
-        elif dificultad == "Normal":
-            return "Medio"
-        elif dificultad == "Difícil":
-            return "Avanzado"
-        return "Básico"
-
     def cargar_imagenes(self):
-        # Usa imágenes del diccionario si existen, si no, usa cargar_imagen_segura
-        # Ajusta tamaño para que no sobresalgan
-        dino_size = (max(60, self.ANCHO // 16), max(60, self.ALTO // 12))
-        mapa_size = (max(80, self.ANCHO // 12), max(60, self.ALTO // 14))
-        self.dino_img = self.images.get("dino4") if self.images else None
-        self.mapa_img = self.images.get("mapa") if self.images else None
-        if not self.dino_img:
-            self.dino_img = self.cargar_imagen_segura('dino4.png', dino_size, (0, 150, 0))
-        else:
-            self.dino_img = pygame.transform.smoothscale(self.dino_img, dino_size)
-        if not self.mapa_img:
-            self.mapa_img = self.cargar_imagen_segura('mapa.png', mapa_size, (255, 223, 186))
-        else:
-            self.mapa_img = pygame.transform.smoothscale(self.mapa_img, mapa_size)
-
-    def cargar_imagen_segura(self, archivo, tam, color_fondo):
-        try:
-            img = pygame.image.load(archivo).convert_alpha()
-            img = pygame.transform.smoothscale(img, tam)
-            return img
-        except Exception:
-            surf = pygame.Surface(tam)
-            surf.fill(color_fondo)
-            return surf
+        """Override: asigna imágenes usadas en draw()"""
+        self.dino_img = self.images.get("dino4")
+        self.mapa_img = self.images.get("mapa")
 
     def generar_problema(self):
         if self.nivel_actual == "Básico":
@@ -111,29 +43,34 @@ class JuegoLogico:
         self.problema_actual = problema
         self.respuesta_correcta = respuesta
         self.explicacion = explicacion
-        self.opciones = generar_opciones(respuesta, min_diff=1, max_diff=3)
+        self.opciones = self.generar_opciones(respuesta)
         random.shuffle(self.opciones)
+        self.tiempo_mensaje = 0
+        self.mensaje = ""
+
+    def generar_opciones(self, respuesta: int) -> list[int]:
+        """Crea opciones alrededor de la respuesta correcta."""
+        opciones = {respuesta}
+        while len(opciones) < 4:
+            opciones.add(respuesta + random.choice([-1,1]) * random.randint(1,5))
+        return list(opciones)
 
     def generar_problema_logico_basico(self):
-        nombres = ["Rexy", "Trici", "Spike", "Dina", "Terry"]
-        objetos = ["pasteles", "galletas", "helados", "caramelos"]
-        nombre = random.choice(nombres)
-        obj = random.choice(objetos)
-        n = random.randint(5, 15)
-        x = random.randint(3, 8)
-        y = random.randint(3, 7)
-        f = random.randint(20, 40)
-        c = random.randint(2, 5)
-        problemas = [
-            (f"{nombre} tiene {n} amigos. En la primera fiesta, les dio 1 {obj} a cada uno. En la segunda fiesta, les dio 2 {obj} a cada uno. ¿Cuántos {obj} ha dado en total?", n*3, f"Suma los {obj} de ambas fiestas: {n} + 2×{n} = 3×{n}."),
-            (f"{nombre} plantó {x} árboles mágicos cada día durante {y} días. ¿Cuántos árboles plantó en total?", x*y, f"Multiplica árboles por día por el número de días: {x} × {y}."),
-            (f"{nombre} tiene {f} frutas jurásicas y quiere repartirlas en {c} canastas iguales. ¿Cuántas frutas pondrá en cada canasta?", f//c, f"Divide el total de frutas entre las canastas: {f} ÷ {c}.")
+        nombre = random.choice(self.NOMBRES)
+        obj = random.choice(self.OBJETOS)
+        n, x, y, f, c = [random.randint(lo, hi) for lo,hi in ((5,15),(3,8),(3,7),(20,40),(2,5))]
+        lista = [
+            (f"{nombre} dio 1 {obj} a cada uno de sus {n} amigos en la primera fiesta y 2 en la segunda. ¿Cuántos {obj} dio en total?",
+             n*3, f"Suma 1×{n} + 2×{n} = 3×{n}."),
+            (f"{nombre} plantó {x} árboles cada día durante {y} días. ¿Cuántos en total?",
+             x*y, f"{x} × {y}."),
+            (f"{nombre} tenía {f} frutas y las repartió en {c} canastas iguales. ¿Cuántas por canasta?",
+             f//c, f"{f} ÷ {c}.")
         ]
-        return random.choice(problemas)
+        return random.choice(lista)
 
     def generar_problema_logico_medio(self):
-        nombres = ["Rexy", "Trici", "Spike", "Dina", "Terry"]
-        nombre = random.choice(nombres)
+        nombre = random.choice(self.NOMBRES)
         a = random.randint(2, 5)
         f = random.randint(5, 15)
         m = random.randint(10, 30)
@@ -149,9 +86,7 @@ class JuegoLogico:
         return random.choice(problemas)
 
     def generar_problema_logico_avanzado(self):
-        import math
-        nombres = ["Rexy", "Trici", "Spike", "Dina", "Terry"]
-        nombre = random.choice(nombres)
+        nombre = random.choice(self.NOMBRES)
         a = random.randint(3, 6)
         p = random.randint(2, 3)
         l = random.randint(5, 10)
@@ -167,142 +102,98 @@ class JuegoLogico:
         ]
         return random.choice(problemas)
 
-    def mostrar_mensaje_temporal(self, mensaje, correcto=None, opcion_idx=None):
-        frases_correcto = [
-            "¡Correcto! 🦖", "¡Genial! 🎉", "¡Eres un crack! 🥚", "¡Dino-aplausos! 👏",
-            "¡Súper bien!", "¡Lo lograste!", "¡Respuesta jurásica!", "¡Dino-poder!"
-        ]
-        frases_incorrecto = [
-            "¡Uy! Intenta de nuevo 🦕", "No te rindas 🦴", "¡Casi! 😅", "¡Ánimo! 🌟",
-            "¡Sigue intentando!", "¡No te desanimes!", "¡Puedes lograrlo!", "¡Dino-ánimo!"
-        ]
-        if correcto is not None:
-            if correcto:
-                mensaje = random.choice(frases_correcto)
-            else:
-                mensaje = random.choice(frases_incorrecto) + f" La respuesta era {self.respuesta_correcta}."
-        self.mensaje = mensaje
-        self.tiempo_mensaje = 120
-        if opcion_idx is not None:
-            self.animacion_opcion = opcion_idx
-            self.animacion_tiempo = 15
-
-    def manejar_eventos_juego(self, evento):
-        if evento.type == MOUSEBUTTONDOWN:
-            for i, rect in enumerate(self.opciones_rects):
-                if rect.collidepoint(evento.pos):
+    def handle_event(self, evento):
+        super().handle_event(evento)
+        if evento.type == MOUSEBUTTONDOWN and evento.button == 1:
+            for btn in self.opcion_botones:
+                if btn.rect.collidepoint(evento.pos):
                     self.jugadas_totales += 1
-                    if self.opciones[i] == self.respuesta_correcta:
+                    es_correcto = int(btn.texto) == self.respuesta_correcta
+                    if es_correcto:
                         self.puntuacion += 1
                         self.racha += 1
-                        self.mostrar_mensaje_temporal("", correcto=True, opcion_idx=i)
-                        if self.racha > 0 and self.racha % 3 == 0:
-                            self.mensaje += f" ¡Racha de {self.racha}! 🏆"
                     else:
                         self.racha = 0
-                        self.mostrar_mensaje_temporal("", correcto=False, opcion_idx=i)
-                    self.tiempo_mensaje = 120
-                    self.generar_problema()
-                    return True
-        return False
-
-    def dibujar_boton(self, texto, x, y, w, h, color_normal, color_hover):
-        mouse_pos = pygame.mouse.get_pos()
-        rect = pygame.Rect(x, y, w, h)
-        color = color_hover if rect.collidepoint(mouse_pos) else color_normal
-        pygame.draw.rect(self.pantalla, color, rect, border_radius=12)
-        pygame.draw.rect(self.pantalla, (80, 80, 80), rect, 2, border_radius=12)
-        fuente = self.fuente
-        txt = fuente.render(texto, True, (30, 30, 30))
-        txt_rect = txt.get_rect(center=rect.center)
-        self.pantalla.blit(txt, txt_rect)
-        return rect
-
-    def mostrar_texto(self, texto, x, y, fuente=None, centrado=False):
-        fuente = fuente or self.fuente
-        txt = fuente.render(texto, True, (30, 30, 30))
-        rect = txt.get_rect()
-        if centrado:
-            rect.center = (x, y)
-        else:
-            rect.topleft = (x, y)
-        self.pantalla.blit(txt, rect)
-
-    def mostrar_texto_multilinea(self, texto, x, y, fuente=None, centrado=False):
-        fuente = fuente or self.fuente
-        lineas = texto.split("\n")
-        for i, linea in enumerate(lineas):
-            self.mostrar_texto(linea, x, y + i * 36, fuente, centrado)
-
-    def dibujar_fondo(self):
-        if self.fondo:
-            self.fondo.draw(self.pantalla)
-        else:
-            self.pantalla.fill((255, 255, 255))
-
-    def dibujar(self, pantalla):
-        # Método requerido por el screen manager
-        self.dibujar_fondo()
-        # Dibuja imágenes si existen, ajustadas y sin sobresalir
-        margen = 20
-        if self.dino_img:
-            self.pantalla.blit(self.dino_img, (margen, self.ALTO - self.dino_img.get_height() - margen))
-        if self.mapa_img:
-            self.pantalla.blit(self.mapa_img, (self.ANCHO - self.mapa_img.get_width() - margen, self.ALTO - self.mapa_img.get_height() - margen))
-        # Problema
-        self.mostrar_texto_multilinea(self.problema_actual, self.ANCHO // 2, 80, centrado=True)
-        # Opciones con Boton de ui.utils
-        self.opciones_rects = []
-        self.boton_opciones = []
-        colores = [(144, 238, 144), (173, 216, 230), (255, 255, 153), (255, 182, 193)]
-        color_hover_default = (200, 200, 200)
-        # Calcula posiciones y tamaños de botones de forma responsiva
-        n = len(self.opciones)
-        boton_w = max(70, min(120, self.ANCHO // (n * 2)))
-        boton_h = max(40, min(70, self.ALTO // 16))
-        espacio = max(20, min(50, self.ANCHO // (n * 6)))
-        total_w = n * boton_w + (n - 1) * espacio
-        x_ini = (self.ANCHO - total_w) // 2
-        y_opciones = int(self.ALTO * 0.32)
-        for i, opcion in enumerate(self.opciones):
-            x = x_ini + i * (boton_w + espacio)
-            boton = Boton(
-                str(opcion), x, y_opciones, boton_w, boton_h,
-                color_normal=colores[i % len(colores)],
-                color_hover=color_hover_default,
-                texto_adaptativo=True
-            )
-            boton.draw(self.pantalla)
-            self.opciones_rects.append(boton.rect)
-            self.boton_opciones.append(boton)
-        # Mensaje y explicación
-        if self.tiempo_mensaje > 0:
-            self.mostrar_texto(self.mensaje, self.ANCHO // 2, 320, centrado=True)
-            self.tiempo_mensaje -= 1
-            if "Correcto" in self.mensaje or "¡Genial!" in self.mensaje or "¡Eres un crack!" in self.mensaje or "¡Dino-aplausos!" in self.mensaje:
-                self.mostrar_texto_multilinea(self.explicacion, self.ANCHO // 2, 370, centrado=True)
-        # Puntuación y racha
-        self.mostrar_texto(f"Puntuación: {self.puntuacion}/{self.jugadas_totales}", 30, self.ALTO - 35)
-        self.mostrar_texto(f"Racha: {self.racha}", self.ANCHO - 190, self.ALTO - 35)
-        # Barra de navegación
-        if self.navbar:
-            self.navbar.draw(self.pantalla, self.images.get("dino_logo") if self.images else None)
-
-    def handle_event(self, evento):
-        # Compatible con ScreenManager: recibe un solo evento
-        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-            if self.return_to_menu:
-                self.return_to_menu()
-        if self.navbar and hasattr(self.navbar, "handle_event"):
-            nav_result = self.navbar.handle_event(evento, self.images.get("dino_logo") if self.images else None)
-            if nav_result is not None and self.return_to_menu:
-                self.return_to_menu()
-        self.manejar_eventos_juego(evento)
+                    self.mostrar_feedback(es_correcto, self.respuesta_correcta)
+                    self.tiempo_mensaje = 90
+                    pygame.time.set_timer(self.USEREVENT_SIGUIENTE, 900, True)
+                    return
+        elif evento.type == self.USEREVENT_SIGUIENTE:
+            self.generar_problema()
 
     def update(self, dt=None):
-        # Compatible con ScreenManager: dt puede ser None
-        pass
+        if self.tiempo_mensaje > 0:
+            self.tiempo_mensaje -= 1
 
     def draw(self, surface):
-        # Compatible con ScreenManager: surface es la pantalla
-        self.dibujar(surface)
+        self.dibujar_fondo()
+        # problema
+        mostrar_texto_adaptativo(self.pantalla, self.problema_actual,
+                                 x=20, y=self.navbar_height+20,
+                                 w=self.ANCHO-40, h=int(self.ALTO*0.2),
+                                 fuente_base=self.fuente)
+        # opciones
+        self.dibujar_opciones()
+
+        # — Dino pequeño a la izquierda del primer botón —
+        if self.opcion_botones and self.dino_img:
+            # calculamos nuevo ancho = 15% del ancho de pantalla
+            nuevo_w = int(self.ANCHO * 0.15)
+            ow, oh = self.dino_img.get_size()
+            nuevo_h = int(oh * nuevo_w / ow)
+            dino_small = pygame.transform.smoothscale(self.dino_img, (nuevo_w, nuevo_h))
+            first_btn = self.opcion_botones[0]
+            x_dino = max(10, first_btn.rect.left - nuevo_w - 10)
+            y_dino = first_btn.rect.centery - nuevo_h // 2
+            self.pantalla.blit(dino_small, (x_dino, y_dino))
+
+        # — Mapa pequeño debajo de los botones —
+        if self.mapa_img:
+            map_w, map_h = self.mapa_img.get_size()
+            nuevo_map_w = int(self.ANCHO * 0.25)   # 25% del ancho de pantalla
+            nuevo_map_h = int(map_h * nuevo_map_w / map_w)
+            mapa_small = pygame.transform.smoothscale(self.mapa_img, (nuevo_map_w, nuevo_map_h))
+            if self.opcion_botones:
+                y_map = self.opcion_botones[-1].rect.bottom + 10
+            else:
+                y_map = self.navbar_height + 10
+            x_map = (self.ANCHO - nuevo_map_w) // 2
+            self.pantalla.blit(mapa_small, (x_map, y_map))
+
+        # feedback
+        if self.tiempo_mensaje > 0:
+            mostrar_texto_adaptativo(self.pantalla,
+                                     f"{self.mensaje}\n{self.explicacion}",
+                                     x=20, y=int(self.ALTO*0.5),
+                                     w=self.ANCHO-40, h=int(self.ALTO*0.25),
+                                     fuente_base=self.fuente, centrado=True)
+        # puntaje y navbar
+        self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntaje")
+        if self.navbar:
+            self.navbar.draw(self.pantalla, self.images.get("dino_logo"))
+
+    def dibujar_opciones(self):
+        """Construye y dibuja botones para cada opción."""
+        colores = [(144,238,144),(173,216,230),(255,255,153),(255,182,193)]
+        espacio = 20
+        w = max(100, min(180, self.ANCHO // (len(self.opciones) * 2)))
+        h = max(50, min(80, self.ALTO // 12))
+        x0 = (self.ANCHO - (w*4 + espacio*3)) // 2
+        y0 = self.ALTO//2 - h//2
+        self.opcion_botones.clear()
+        for i, val in enumerate(self.opciones):
+            x = x0 + i*(w+espacio)
+            btn = Boton(
+                # firma correcta: texto, x, y, ancho, alto
+                texto=str(val),
+                x=x, y=y0, ancho=w, alto=h,
+                fuente=self.fuente,
+                color_normal=colores[i],    # antes color_bg
+                color_texto=(30,30,30)      # antes color_text
+            )
+            btn.draw(self.pantalla, tooltip_manager=self.tooltip_manager)
+            self.opcion_botones.append(btn)
+
+    def mostrar_mensaje_temporal(self, mensaje):
+        self.mensaje = mensaje
+        self.tiempo_mensaje = 90
