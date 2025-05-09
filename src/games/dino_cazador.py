@@ -38,19 +38,40 @@ class JuegoCazadorNumeros(JuegoBase):
         self.tiempo_mensaje = 0
         self.mensaje = ""
         self.opcion_botones = []
-        self.cargar_imagenes()  # <-- Agrega esta línea
+        self.cargar_imagenes()
         self.generar_problema()
 
     def cargar_imagenes(self):
-        self.dino_img = self.images.get("dino3")
-        self.fruta_img = self.images.get("fruta")
+        # Ajusta el tamaño de las imágenes para que entren bien en pantalla
+        dino_img = self.images.get("dino3")
+        fruta_img = self.images.get("fruta")
+        ancho_max = int(self.ANCHO * 0.13)  # 13% del ancho de pantalla
+        alto_max = int(self.ALTO * 0.13)    # 13% del alto de pantalla
+
+        if dino_img:
+            ow, oh = dino_img.get_size()
+            escala = min(ancho_max / ow, alto_max / oh, 1)
+            nuevo_w = int(ow * escala)
+            nuevo_h = int(oh * escala)
+            self.dino_img = pygame.transform.smoothscale(dino_img, (nuevo_w, nuevo_h))
+        else:
+            self.dino_img = None
+
+        if fruta_img:
+            ow, oh = fruta_img.get_size()
+            escala = min(ancho_max / ow, alto_max / oh, 1)
+            nuevo_w = int(ow * escala)
+            nuevo_h = int(oh * escala)
+            self.fruta_img = pygame.transform.smoothscale(fruta_img, (nuevo_w, nuevo_h))
+        else:
+            self.fruta_img = None
 
     def generar_problema(self):
-        # Ejemplo simple: multiplicación básica, puedes adaptar según dificultad
-        a = random.randint(2, 9)
-        b = random.randint(2, 9)
-        self.problema_actual = f"¿Cuánto es {a} × {b}?"
-        self.respuesta_correcta = a * b
+        # Selecciona el problema según el nivel de dificultad usando la función auxiliar
+        nivel = self.dificultad  # Debe ser "Básico", "Medio" o "Avanzado"
+        problema, respuesta = generar_problema_multiplicacion(nivel)
+        self.problema_actual = problema
+        self.respuesta_correcta = respuesta
         self.opciones = self.generar_opciones(self.respuesta_correcta)
         random.shuffle(self.opciones)
         self.tiempo_mensaje = 0
