@@ -11,7 +11,7 @@ from ui.components.utils import (
 )
 from ui.components.emoji import mostrar_alternativo_adaptativo
 
-from core.responsive_scaler import ResponsiveScalerDinamico
+from core.scale.responsive_scaler_animated import ResponsiveScalerAnimado
 from core.decoration.background_game import FondoAnimado
 from core.decoration.effects import EffectsMixin
 
