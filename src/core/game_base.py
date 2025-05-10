@@ -576,7 +576,6 @@ class JuegoBase(EffectsMixin):
             color=(20, 20, 50, 150),
             centrado=True
         )
-        
         mostrar_texto_adaptativo(
             self.pantalla,
             self.operacion_actual,
