@@ -60,7 +60,7 @@ def mostrar_pregunta(pantalla, pregunta, sx, sy, navbar_height, ANCHO, fuente):
         color=(30, 30, 90),
         centrado=True
     )
-
+@staticmethod
 def color_complementario(rgb):
     return tuple(255 - c for c in rgb)
 
