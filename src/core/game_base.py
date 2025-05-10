@@ -290,11 +290,15 @@ class JuegoBase(EffectsMixin):
             return  # No dibujar si no hay opciones
 
         border_radius = border_radius or self.sy(12)
-        espacio = espacio or self.sx(20)
+        # Aumenta el espacio entre botones (por ejemplo, 2.5 veces el valor base)
+        espacio = espacio or int(self.sx(20) * 2.5)
 
         cnt = len(opciones)
         w = max(self.sx(100), min(self.sx(180), self.ANCHO // (cnt * 2)))
         h = max(self.sy(50), min(self.sy(80), self.ALTO // 12))
+        # Hacer los botones cuadrados
+        size = min(w, h)
+        w = h = size
 
         if x0 is None:
             x0 = (self.ANCHO - (w * cnt + espacio * (cnt - 1))) // 2

@@ -37,3 +37,5 @@ Para guardar las dependencias :
 ![home](image.png)
 -selector game by nivel
 ![nivel](image-1.png)
+--game example--
+![alt text](image-2.png)
