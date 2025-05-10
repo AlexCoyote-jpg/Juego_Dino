@@ -44,7 +44,7 @@ class MenuPrincipal:
 
     def _precache_fonts(self):
         esc = self.pantalla.get_width() / 900
-        self.fonts["titulo"] = pygame.font.SysFont("Segoe UI", int(54 * esc), bold=True)
+        self.fonts["titulo"] = pygame.font.SysFont("Segoe UI", int(54 * esc))
         self.fonts["texto"] = pygame.font.SysFont("Segoe UI", int(28 * esc))
 
     def mostrar_home(self):
@@ -115,7 +115,7 @@ class MenuPrincipal:
         dibujar_caja_texto(self.pantalla, x_t, y_t, w_t, h_t, (70, 130, 180))
         mostrar_texto_adaptativo(
             self.pantalla,
-            f"🎯 Juegos de nivel {dificultad}",
+            f"Juegos de nivel {dificultad} 🎯",
             x_t, y_t, w_t, h_t,
             self.fonts["titulo"],
             (255, 255, 255),
