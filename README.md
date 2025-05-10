@@ -33,4 +33,7 @@ Para guardar las dependencias :
 -Modifica: setup.py
 
 --Menu Principal--
-![alt text](image.png)
+-home
+![home](image.png)
+-selector game by nivel
+![nivel](image-1.png)
