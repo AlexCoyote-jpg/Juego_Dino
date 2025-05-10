@@ -31,3 +31,6 @@ Nota: Si quieres instalar automaticamente todas las libreria ejecuta python setu
 Para guardar las dependencias : 
 -Ejecuta : pip freeze > requirements.txt
 -Modifica: setup.py
+
+--Menu Principal--
+![alt text](image.png)
