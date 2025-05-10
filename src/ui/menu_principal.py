@@ -214,37 +214,30 @@ class MenuPrincipal:
     def run(self):
         running = True
         last_time = time.time()
-        # Al iniciar, muestra la pantalla Home
         set_screen(self.screen_manager, HomeScreen(self))
-
+        Fps = 60
 
         while running:
             now = time.time()
             dt = now - last_time
             last_time = now
 
-            # Collect all events for this frame
             events = pygame.event.get()
 
-            # Check for quit event
             for event in events:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.VIDEORESIZE:
-                    self.base_width, ALTO = event.w, event.h
-                    self.pantalla = pygame.display.set_mode((self.base_width, ALTO), pygame.RESIZABLE)
-                    self.fondo.resize(self.base_width, ALTO)
-
-            # Actualiza tooltips globales si usas botones personalizados
-            self.tooltip_manager.update(pygame.mouse.get_pos())
-
-            # First, let the navbar handle events
-            for event in events:
-                if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                    # Solo actualiza si cambia el tamaño
+                    if (event.w, event.h) != (self.base_width, self.base_height):
+                        self.base_width, self.base_height = event.w, event.h
+                        self.pantalla = pygame.display.set_mode((self.base_width, self.base_height), pygame.RESIZABLE)
+                        self.fondo.resize(self.base_width, self.base_height)
+                # Barra de navegación
+                if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
                     nav_result = self.navbar.handle_event(event, self.logo)
                     if nav_result is not None:
                         vista = self.niveles[nav_result]
-                        # Cambia la pantalla activa usando el screen manager
                         if vista == "Home":
                             set_screen(self.screen_manager, HomeScreen(self))
                         elif vista in ("Fácil", "Normal", "Difícil"):
@@ -252,20 +245,21 @@ class MenuPrincipal:
                         elif vista == "ChatBot":
                             set_screen(self.screen_manager, ChatBotScreen(self))
 
-            # Then, let the current screen handle remaining events
-            # This ensures game screens get priority over menu events
+            # Actualiza tooltips globales si usas botones personalizados
+            self.tooltip_manager.update(pygame.mouse.get_pos())
+
+            # Delega eventos a la pantalla activa
             handle_event_screen(self.screen_manager, events)
 
-            # 1. Fondo dinámico
-            Fps = 60
+            # Fondo dinámico
             self.fondo.update(dt * Fps)
             self.fondo.draw(self.pantalla)
 
-            # 2. Elementos de la pantalla según selección usando el screen manager
+            # Elementos de la pantalla según selección usando el screen manager
             update_screen(self.screen_manager, dt)
             draw_screen(self.screen_manager, self.pantalla)
 
-            # 3. Barra de navegación con logo (siempre encima de todo)
+            # Barra de navegación con logo (siempre encima de todo)
             self.navbar.draw(self.pantalla, self.logo)
 
             pygame.display.flip()
