@@ -3,74 +3,99 @@ from functools import lru_cache
 
 class ResponsiveScaler:
     """
-    Sistema de escalado responsivo reutilizable para cualquier elemento visual.
+    Sistema mejorado de escalado responsivo para interfaces PyGame.
+    Adaptado para ser rápido, limpio y robusto.
     """
-    def __init__(self, base_width=1280, base_height=720):
+
+    def __init__(self, base_width=1280, base_height=720, uniform=False):
         self.base_width = base_width
         self.base_height = base_height
-        self.current_width = base_width
-        self.current_height = base_height
-        self.scale_x = 1.0
-        self.scale_y = 1.0
-        self.aspect_ratio = base_width / base_height
-        self.last_update_time = 0
-        self.update_interval = 0.2  # segundos
+        self.uniform = uniform  # Escalado proporcional si es True
+        self._width = base_width
+        self._height = base_height
+        self._last_update = 0
+        self._scale_x = 1.0
+        self._scale_y = 1.0
+        self._scale_avg = 1.0
+        self._update_scales(base_width, base_height)
 
-    def update(self, width, height):
-        current_time = time.time()
-        if current_time - self.last_update_time < self.update_interval:
-            if width == self.current_width and height == self.current_height:
-                return False
-        if width == self.current_width and height == self.current_height:
+    def update(self, width: int, height: int) -> bool:
+        """
+        Actualiza las proporciones de escala si cambió el tamaño.
+        Devuelve True si hubo cambio real.
+        """
+        if (width, height) == (self._width, self._height):
             return False
-        self.current_width = width
-        self.current_height = height
-        self.scale_x = width / self.base_width
-        self.scale_y = height / self.base_height
-        self.aspect_ratio = width / height
-        self.last_update_time = current_time
+
+        self._width = width
+        self._height = height
+        self._last_update = time.time()
+        self._update_scales(width, height)
+        self.clear_cache()
         return True
 
-    @lru_cache(maxsize=1024)
-    def sx(self, value):
-        """Escala un valor horizontal."""
-        return int(value * self.scale_x)
+    def _update_scales(self, width, height):
+        self._scale_x = width / self.base_width
+        self._scale_y = height / self.base_height
+        if self.uniform:
+            avg = (self._scale_x + self._scale_y) / 2
+            self._scale_x = self._scale_y = avg
+        self._scale_avg = (self._scale_x * 0.6 + self._scale_y * 0.4)
+
+    def clear_cache(self):
+        """Limpia la caché de funciones escaladas."""
+        self.sx.cache_clear()
+        self.sy.cache_clear()
+        self.sf.cache_clear()
+
+    @property
+    def scale_x(self):
+        return self._scale_x
+
+    @property
+    def scale_y(self):
+        return self._scale_y
+
+    @property
+    def scale_avg(self):
+        return self._scale_avg
 
     @lru_cache(maxsize=1024)
-    def sy(self, value):
-        """Escala un valor vertical."""
-        return int(value * self.scale_y)
+    def sx(self, value: float | int) -> int:
+        return int(value * self._scale_x)
 
-    @lru_cache(maxsize=256)
-    def sf(self, size):
-        """Escala un tamaño de fuente de manera balanceada."""
-        scale_factor = (self.scale_x * 0.6 + self.scale_y * 0.4)
-        return max(12, int(size * scale_factor))
+    @lru_cache(maxsize=1024)
+    def sy(self, value: float | int) -> int:
+        return int(value * self._scale_y)
 
-    def scale_rect(self, x, y, width, height):
-        """Escala un rectángulo completo."""
-        return (
-            self.sx(x),
-            self.sy(y),
-            self.sx(width),
-            self.sy(height)
-        )
+    @lru_cache(maxsize=512)
+    def sf(self, size: float | int) -> int:
+        return max(12, int(size * self._scale_avg))
 
-    def get_centered_rect(self, width, height, vertical_offset=0, horizontal_offset=0):
-        """Obtiene un rectángulo centrado en la pantalla con dimensiones escaladas."""
-        scaled_width = self.sx(width)
-        scaled_height = self.sy(height)
-        x = (self.current_width - scaled_width) // 2 + self.sx(horizontal_offset)
-        y = (self.current_height - scaled_height) // 2 + self.sy(vertical_offset)
-        return (x, y, scaled_width, scaled_height)
+    def scale_rect(self, x, y, w, h):
+        """Escala un rectángulo."""
+        return self.sx(x), self.sy(y), self.sx(w), self.sy(h)
+
+    def get_centered_rect(self, w, h, vertical_offset=0, horizontal_offset=0):
+        """Devuelve un rectángulo centrado con dimensiones escaladas."""
+        sw = self.sx(w)
+        sh = self.sy(h)
+        cx = (self._width - sw) // 2 + self.sx(horizontal_offset)
+        cy = (self._height - sh) // 2 + self.sy(vertical_offset)
+        return cx, cy, sw, sh
 
     def maintain_aspect_ratio(self, width, height):
-        """Ajusta dimensiones para mantener la relación de aspecto."""
+        """
+        Mantiene la relación de aspecto base al escalar.
+        """
         target_ratio = width / height
-        if target_ratio > self.aspect_ratio:
-            new_width = self.sx(width)
-            new_height = int(new_width / target_ratio)
-        else:
+        base_ratio = self.base_width / self.base_height
+
+        if target_ratio > base_ratio:
             new_height = self.sy(height)
-            new_width = int(new_height * target_ratio)
+            new_width = int(new_height * base_ratio)
+        else:
+            new_width = self.sx(width)
+            new_height = int(new_width / base_ratio)
+
         return new_width, new_height
