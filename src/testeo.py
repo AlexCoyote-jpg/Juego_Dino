@@ -13,72 +13,68 @@ def generar_problema():
     texto = f"{a} {op} {b} = ?"
     return texto, resultado
 
-def main():
-    pygame.init()
-    pantalla = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
-    clock = pygame.time.Clock()
+class DinoMathGame(JuegoBase):
+    def __init__(self, pantalla, config=None, dificultad=1, fondo=None, navbar=None, images=None, sounds=None, return_to_menu=None):
+        nombre = "DinoMath"
+        config = config or {}
+        images = images or {}
+        sounds = sounds or {}
+        if return_to_menu is None:
+            return_to_menu = lambda: None
+        super().__init__(nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
+        self.problemas = [generar_problema() for _ in range(10)]
+        self.indice = 0
+        self.puntaje = 0
+        self.siguiente_problema()
 
-    nombre = "DinoMath"
-    config = {}
-    dificultad = 1
-    fondo = None
-    navbar = None
-    images = {}
-    sounds = {}
-    def return_to_menu(): pass
-
-    juego = JuegoBase(nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
-
-    # Lista de problemas
-    problemas = [generar_problema() for _ in range(10)]
-    indice = 0
-    puntaje = 0
-
-    def siguiente_problema():
-        nonlocal indice
-        if indice < len(problemas):
-            texto, resultado = problemas[indice]
-            juego.operacion_actual = texto
-            juego.respuesta_correcta = resultado
-            juego.opciones = juego.generar_opciones(resultado, 3)
+    def siguiente_problema(self):
+        if self.indice < len(self.problemas):
+            texto, resultado = self.problemas[self.indice]
+            self.operacion_actual = texto
+            self.respuesta_correcta = resultado
+            self.opciones = self.generar_opciones(resultado, 3)
         else:
-            juego.operacion_actual = "¡Juego terminado!"
-            juego.opciones = []
-    
-    siguiente_problema()
+            self.operacion_actual = "¡Juego terminado!"
+            self.opciones = []
 
-    corriendo = True
-    while corriendo:
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                corriendo = False
-            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-                corriendo = False
-            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                mouse_pos = pygame.mouse.get_pos()
-                for i, boton in enumerate(getattr(juego, "opcion_botones", [])):
-                    # Suponiendo que cada 'boton' es un objeto con .rect y .texto
-                    if boton.rect.collidepoint(mouse_pos):
-                        valor = int(boton.texto)
-                        if valor == juego.respuesta_correcta:
-                            puntaje += 1
-                            juego.mostrar_feedback(True)
-                        else:
-                            juego.mostrar_feedback(False, respuesta_correcta=juego.respuesta_correcta)
-                        indice += 1
-                        siguiente_problema()
-                        break
-            else:
-                juego.handle_event(evento)
+    def run(self):
+        clock = pygame.time.Clock()
+        corriendo = True
+        while corriendo:
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    corriendo = False
+                elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                    corriendo = False
+                elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                    mouse_pos = pygame.mouse.get_pos()
+                    for i, boton in enumerate(getattr(self, "opcion_botones", [])):
+                        if boton.rect.collidepoint(mouse_pos):
+                            try:
+                                valor = int(boton.texto)
+                            except ValueError:
+                                valor = None
+                            if valor == getattr(self, "respuesta_correcta", None):
+                                self.puntaje += 1
+                                self.mostrar_feedback(True)
+                            else:
+                                self.mostrar_feedback(False, respuesta_correcta=getattr(self, "respuesta_correcta", None))
+                            self.indice += 1
+                            self.siguiente_problema()
+                            break
+                else:
+                    self.handle_event(evento)
 
-        juego.puntuacion = puntaje
-        juego.total_preguntas = len(problemas)
-        juego.update()
-        juego.draw()
-        pygame.display.flip()
-        clock.tick(60)
-
-    pygame.quit()
+            self.puntuacion = self.puntaje
+            self.total_preguntas = len(self.problemas)
+            self.update()
+            self.draw()
+            pygame.display.flip()
+            clock.tick(60)
+        pygame.quit()
 
 if __name__ == "__main__":
-    main()
+    pygame.init()
+    pantalla = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
+    juego = DinoMathGame(pantalla)
+    juego.run()

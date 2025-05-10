@@ -1,55 +1,69 @@
 import pygame
-from core.juego_base import JuegoBase
-from ui.components.utils import Boton
+import random
+from core.game_base import JuegoBase
+
+def generar_problema():
+    a = random.randint(1, 20)
+    b = random.randint(1, 20)
+    op = random.choice(["+", "-"])
+    if op == "+":
+        resultado = a + b
+    else:
+        resultado = a - b
+    texto = f"{a} {op} {b} = ?"
+    return texto, resultado
 
 class MiJuego(JuegoBase):
-    def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
-        super().__init__("prueba", pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
-        self.circulo_color = (0, 120, 255)
-        self.circulo_radio = 60
-        self._salir_clicked = False
-        self._init_botones()
+    def __init__(self, pantalla, config=None, dificultad=1, fondo=None, navbar=None, images=None, sounds=None, return_to_menu=None):
+        nombre = "DinoMath"
+        config = config or {}
+        images = images or {}
+        sounds = sounds or {}
+        if return_to_menu is None:
+            return_to_menu = lambda: None
+        super().__init__(nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
+        self.problemas = [generar_problema() for _ in range(10)]
+        self.indice = 0
+        self.puntaje = 0
+        self.siguiente_problema()
 
-    def _init_botones(self):
-        self.boton_salir = Boton(
-            "Salir 🚪",
-            x=30, y=30, ancho=120, alto=48,
-            color_normal=(220, 240, 255),
-            color_hover=(180, 210, 240),
-            fuente=self.fuente,
-            tooltip="Volver al menú"
-        )
+    def siguiente_problema(self):
+        if self.indice < len(self.problemas):
+            texto, resultado = self.problemas[self.indice]
+            self.operacion_actual = texto
+            self.respuesta_correcta = resultado
+            self.opciones = self.generar_opciones(resultado, 3)
+        else:
+            self.operacion_actual = "¡Juego terminado!"
+            self.opciones = []
 
-    def handle_event(self, event):
-        super().handle_event(event)
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.boton_salir.collidepoint(event.pos):
-                self._salir_clicked = True
+    def handle_event(self, evento):
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+            # Llama al callback para volver al menú
+            self.return_to_menu()
+        elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            for i, boton in enumerate(getattr(self, "opcion_botones", [])):
+                if boton.rect.collidepoint(mouse_pos):
+                    try:
+                        valor = int(boton.texto)
+                    except ValueError:
+                        valor = None
+                    if valor == getattr(self, "respuesta_correcta", None):
+                        self.puntaje += 1
+                        self.mostrar_feedback(True)
+                    else:
+                        self.mostrar_feedback(False, respuesta_correcta=getattr(self, "respuesta_correcta", None))
+                    self.indice += 1
+                    self.siguiente_problema()
+                    break
+        else:
+            super().handle_event(evento)
 
     def update(self, dt=None):
-        pass
+        self.puntuacion = self.puntaje
+        self.total_preguntas = len(self.problemas)
+        super().update(dt)
 
-    def draw(self, surface):
-        self.pantalla = surface
-        self.dibujar_fondo()
-        centro = (self.ANCHO // 2, self.ALTO // 2)
-        pygame.draw.circle(surface, self.circulo_color, centro, self.circulo_radio)
-        self.mostrar_titulo()
-        ''' Mostrar texto de ejemplo
-        self.mostrar_texto(
-            "Redimensiona la ventana",
-            x=self.ANCHO // 2 - 200,
-            y=self.navbar_height + 30,
-            w=400,
-            h=48,
-            fuente=self.fuente_titulo,
-        )
-        '''
-        
-        self.boton_salir.draw(surface)
-        self.mostrar_puntaje(3, 15 , "hola")
-        if self._salir_clicked:
-            self.return_to_menu()
-
-    def on_resize(self, ancho, alto):
-        self._init_botones()
+    def draw(self, surface=None):
+        super().draw(surface)
