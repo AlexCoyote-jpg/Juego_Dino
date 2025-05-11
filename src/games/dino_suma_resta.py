@@ -123,8 +123,8 @@ class JuegoSumaResta(JuegoBase):
         self.dibujar_feedback()
         self.draw_animacion_estrellas()
         self.draw_particulas()
-        # Usa los atributos propios para puntaje y jugadas
-        self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntaje")
+        self.mostrar_operacion()
+       
 
     def handle_event(self, evento):
         super().handle_event(evento)
