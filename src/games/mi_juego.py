@@ -1,6 +1,6 @@
 import pygame
 import random
-from core.game_base import JuegoBase
+from core.juego_base import JuegoBase
 
 def generar_problema():
     a = random.randint(1, 20)
