@@ -113,74 +113,8 @@ class JuegoCazadorNumeros(JuegoBase):
             self.fruta_img = None
             
         # Crear imagen para las estrellas
-        self.estrella_img = self.crear_estrella_img()
 
-    def crear_estrella_img(self, tamaño=None, color=(255, 215, 0)):
-        """Crea una imagen de estrella para efectos de celebración"""
-        tamaño = tamaño or self.sy(15)
-        img = pygame.Surface((tamaño, tamaño), pygame.SRCALPHA)
-        puntos = []
-        for i in range(5):
-            ang = math.pi/2 + i * 2*math.pi/5
-            puntos.append((
-                tamaño//2 + int(tamaño//2 * math.cos(ang)),
-                tamaño//2 - int(tamaño//2 * math.sin(ang))
-            ))
-            ang += math.pi/5
-            puntos.append((
-                tamaño//2 + int(tamaño//5 * math.cos(ang)),
-                tamaño//2 - int(tamaño//5 * math.sin(ang))
-            ))
-        pygame.draw.polygon(img, color, puntos)
-        return img
 
-    def crear_efecto_estrellas(self, posicion, cantidad=5):
-        """Crea estrellas para celebrar una respuesta correcta"""
-        x, y = posicion
-        if not self.estrella_img:
-            self.estrella_img = self.crear_estrella_img()
-        for _ in range(cantidad):
-            angulo = random.uniform(0, 2 * math.pi)
-            distancia = random.uniform(self.sy(30), self.sy(100))
-            estrella_x = x + math.cos(angulo) * distancia
-            estrella_y = y + math.sin(angulo) * distancia
-            escala = random.uniform(0.7, 1.3)
-            rotacion = random.uniform(0, 360)
-            vida = random.randint(40, 80)
-            self.estrellas.append({
-                'x': estrella_x, 'y': estrella_y,
-                'escala': escala, 'rotacion': rotacion,
-                'vida': vida, 'max_vida': vida
-            })
-        self.animacion_activa = True
-        self.tiempo_animacion = 60
-
-    def update_animacion_estrellas(self):
-        """Actualiza la animación de las estrellas"""
-        for s in self.estrellas[:]:
-            s['rotacion'] += 2
-            s['vida'] -= 1
-            if s['vida'] <= 0:
-                self.estrellas.remove(s)
-        if self.animacion_activa:
-            self.tiempo_animacion -= 1
-            if self.tiempo_animacion <= 0:
-                self.animacion_activa = False
-
-    def draw_animacion_estrellas(self):
-        """Dibuja las estrellas animadas"""
-        if not self.estrella_img:
-            self.estrella_img = self.crear_estrella_img()
-        for s in self.estrellas:
-            opacidad = int(255 * (s['vida'] / s['max_vida']))
-            img_rotada = pygame.transform.rotozoom(
-                self.estrella_img,
-                s['rotacion'],
-                s['escala']
-            )
-            img_rotada.set_alpha(opacidad)
-            rect = img_rotada.get_rect(center=(s['x'], s['y']))
-            self.pantalla.blit(img_rotada, rect)
 
     def generar_problema(self):
         # Selecciona el problema según el nivel de dificultad usando la función auxiliar
