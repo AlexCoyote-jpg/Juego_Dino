@@ -142,6 +142,8 @@ class JuegoCazadorNumeros(JuegoBase):
                         self.mejor_racha = max(self.mejor_racha, self.racha_correctas)
                         # Crear efecto de estrellas en la posición del botón
                         self.crear_efecto_estrellas(btn.rect.center)
+                        # Crear efecto de partículas en la posición del botón
+                        self.crear_explosion_particulas(btn.rect.centerx, btn.rect.centery)
                         # Reproducir sonido si está disponible
                         if self.sounds and "correct" in self.sounds:
                             self.sounds["correct"].play()
@@ -173,6 +175,8 @@ class JuegoCazadorNumeros(JuegoBase):
             
         # Actualizar animación de estrellas
         self.update_animacion_estrellas()
+        # Actualizar partículas
+        self.update_particulas()
 
     def draw(self, surface):
         self.dibujar_fondo()
@@ -223,7 +227,8 @@ class JuegoCazadorNumeros(JuegoBase):
 
         # Dibujar animación de estrellas
         self.draw_animacion_estrellas()
-
+        # Dibujar partículas
+        self.draw_particulas()
         # Feedback
         self.dibujar_feedback()
 
