@@ -106,6 +106,8 @@ class JuegoLogico(JuegoBase):
                     if es_correcto:
                         self.puntuacion += 1
                         self.racha += 1
+                        # Efecto de partículas en el centro del botón correcto
+                        self.crear_explosion_particulas(btn.rect.centerx, btn.rect.centery)
                     else:
                         self.racha = 0
                     self.mostrar_feedback(es_correcto, self.respuesta_correcta)
