@@ -58,7 +58,6 @@ class JuegoBase(EffectsMixin):
         self.animacion_activa = False
         self.tiempo_animacion = 0
         self.fondo_animado = FondoAnimado(self.pantalla, self.navbar_height)
-        self.fondo_animado.set_escaladores(self.sx, self.sy)
         self.fondo_animado.resize(self.ANCHO, self.ALTO)
 
     def mostrar_racha(self, rect=None):
@@ -150,7 +149,6 @@ class JuegoBase(EffectsMixin):
             self.fuente_titulo = obtener_fuente(self.sf(36), negrita=True)
             self.fuente = obtener_fuente(self.sf(20))
             self.init_responsive_ui()
-            self.fondo_animado.set_escaladores(self.sx, self.sy)
             self.fondo_animado.resize(self.ANCHO, self.ALTO)
             self.on_resize(self.ANCHO, self.ALTO)
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
