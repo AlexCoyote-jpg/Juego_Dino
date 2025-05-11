@@ -8,7 +8,7 @@ from ui.components.emoji import mostrar_alternativo_adaptativo
 from core.decoration.effects import EffectsMixin
 from core.decoration.background_game import FondoAnimado
 from core.decoration.paleta import PALETA_LISTA as PALETA
-from core.scale.responsive_scaler_basic import ResponsiveScaler
+from core.scale.responsive_scaler_animated import ResponsiveScalerAnimado
 from core.decoration.helpers import (
     mostrar_texto, mostrar_titulo, mostrar_instrucciones, mostrar_puntaje,
     dibujar_opciones, mostrar_victoria, mostrar_operacion, mostrar_racha
@@ -28,11 +28,19 @@ class JuegoBase(EffectsMixin):
 
         self.ANCHO = pantalla.get_width()
         self.ALTO = pantalla.get_height()
-        self.scaler = ResponsiveScaler(1280, 720)
+        # Usamos el scaler animado para transiciones suaves, iniciando en la resolución actual
+        self.scaler = ResponsiveScalerAnimado(
+            initial_width=self.ANCHO,
+            initial_height=self.ALTO,
+            uniform=True,
+            transition_speed=6.0
+        )
+        # Sin transición inicial: target == current
         self.scaler.update(self.ANCHO, self.ALTO)
-        self.sx = self.scaler.scale_x_value
-        self.sy = self.scaler.scale_y_value
-        self.sf = self.scaler.scale_font_size
+        # Métodos de escalado responsivo
+        self.sx = self.scaler.sx
+        self.sy = self.scaler.sy
+        self.sf = self.scaler.sf
 
         self.fuente_titulo = obtener_fuente(self.sf(36), negrita=True)
         self.fuente = obtener_fuente(self.sf(20))
@@ -145,7 +153,12 @@ class JuegoBase(EffectsMixin):
             self.ANCHO, self.ALTO = evento.w, evento.h
             self.pantalla = pygame.display.set_mode((self.ANCHO, self.ALTO), pygame.RESIZABLE)
             self._update_navbar_height()
+            # Actualizamos objetivo de escalado y saltamos inmediatamente
             self.scaler.update(self.ANCHO, self.ALTO)
+            self.scaler.current_width = self.ANCHO
+            self.scaler.current_height = self.ALTO
+            self.scaler._update_scales()
+            self.scaler.clear_cache()
             self.fuente_titulo = obtener_fuente(self.sf(36), negrita=True)
             self.fuente = obtener_fuente(self.sf(20))
             self.init_responsive_ui()
@@ -160,6 +173,8 @@ class JuegoBase(EffectsMixin):
         pass
 
     def update(self, dt=None):
+        # Actualizamos el scaler animado antes de dibujar
+        self.scaler.tick()
         self.fondo_animado.update()
 
     def draw(self, surface):
