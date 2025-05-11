@@ -5,6 +5,7 @@ from ui.components.utils import (
     dibujar_caja_texto, TooltipManager
 )
 from ui.components.emoji import mostrar_alternativo_adaptativo
+from core.decoration.effects import EffectsMixin  # Asegúrate de que la ruta sea correcta
 
 # Ejemplos para mostrar en mostrar_mensaje_temporal o donde corresponda
 
@@ -141,7 +142,7 @@ class ResponsiveScaler:
             new_width = int(new_height * target_ratio)
         return new_width, new_height
 
-class JuegoBase:
+class JuegoBase(EffectsMixin):
     def __init__(self, nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
         """
         Clase base para juegos. Proporciona utilidades y estructura común.
@@ -186,10 +187,6 @@ class JuegoBase:
         # --- Inicializa lista de botones de opciones ---
         self.opcion_botones = []
 
-        # --- Mensaje temporal ---
-        self.mensaje = ""
-        self.tiempo_mensaje = 0
-        
         # --- Elementos UI responsivos ---
         self.ui_elements = {}
         self.init_responsive_ui()
@@ -201,78 +198,19 @@ class JuegoBase:
         # --- Operación actual (para mostrar junto al problema) ---
         self.operacion_actual = ""
 
-        # --- Animación de estrellas ---
+        # --- Efectos visuales ---
+        self.mensaje = ""
+        self.tiempo_mensaje = 0
+        self.mensaje_color = (255, 255, 255, 220)
+        self.mensaje_animacion = 1.0
+        self.sonido_activado = True  # Puedes controlar esto según tu lógica
+
+        # Inicializar listas de efectos si no existen
         self.estrellas = []
+        self.particulas = []
         self.estrella_img = None
-        self.tiempo_animacion = 0
         self.animacion_activa = False
-
-    def crear_estrella_img(self, tamaño=None, color=(255, 215, 0)):
-        """Crea una imagen de estrella para efectos de celebración"""
-        tamaño = tamaño or self.sy(15)
-        import math
-        img = pygame.Surface((tamaño, tamaño), pygame.SRCALPHA)
-        puntos = []
-        for i in range(5):
-            ang = math.pi/2 + i * 2*math.pi/5
-            puntos.append((
-                tamaño//2 + int(tamaño//2 * math.cos(ang)),
-                tamaño//2 - int(tamaño//2 * math.sin(ang))
-            ))
-            ang += math.pi/5
-            puntos.append((
-                tamaño//2 + int(tamaño//5 * math.cos(ang)),
-                tamaño//2 - int(tamaño//5 * math.sin(ang))
-            ))
-        pygame.draw.polygon(img, color, puntos)
-        return img
-
-    def crear_efecto_estrellas(self, posicion, cantidad=5):
-        """Crea estrellas para celebrar una respuesta correcta"""
-        import random, math
-        x, y = posicion
-        if not self.estrella_img:
-            self.estrella_img = self.crear_estrella_img()
-        for _ in range(cantidad):
-            angulo = random.uniform(0, 2 * math.pi)
-            distancia = random.uniform(self.sy(30), self.sy(100))
-            estrella_x = x + math.cos(angulo) * distancia
-            estrella_y = y + math.sin(angulo) * distancia
-            escala = random.uniform(0.7, 1.3)
-            rotacion = random.uniform(0, 360)
-            vida = random.randint(40, 80)
-            self.estrellas.append({
-                'x': estrella_x, 'y': estrella_y,
-                'escala': escala, 'rotacion': rotacion,
-                'vida': vida, 'max_vida': vida
-            })
-        self.animacion_activa = True
-        self.tiempo_animacion = 60
-
-    def update_animacion_estrellas(self):
-        for s in self.estrellas[:]:
-            s['rotacion'] += 2
-            s['vida'] -= 1
-            if s['vida'] <= 0:
-                self.estrellas.remove(s)
-        if self.animacion_activa:
-            self.tiempo_animacion -= 1
-            if self.tiempo_animacion <= 0:
-                self.animacion_activa = False
-
-    def draw_animacion_estrellas(self):
-        if not self.estrella_img:
-            self.estrella_img = self.crear_estrella_img()
-        for s in self.estrellas:
-            opacidad = int(255 * (s['vida'] / s['max_vida']))
-            img_rotada = pygame.transform.rotozoom(
-                self.estrella_img,
-                s['rotacion'],
-                s['escala']
-            )
-            img_rotada.set_alpha(opacidad)
-            rect = img_rotada.get_rect(center=(s['x'], s['y']))
-            self.pantalla.blit(img_rotada, rect)
+        self.tiempo_animacion = 0
 
     def mostrar_racha(self, rect=None):
         """Muestra la racha actual y la mejor racha en pantalla."""
@@ -584,61 +522,12 @@ class JuegoBase:
         pass
 
     def update(self, dt=None):
-        # Actualizar animación de estrellas
-        self.update_animacion_estrellas()
         # Para ser sobrescrito por cada juego
         pass
 
     def draw(self, surface):
-        # Dibujar animación de estrellas
-        self.draw_animacion_estrellas()
         # Para ser sobrescrito por cada juego
         pass
-
-    def mostrar_feedback(self, es_correcto, respuesta_correcta=None):
-        if es_correcto:
-            mensaje = random.choice(mensajes_correcto)
-            self.racha_correctas += 1
-            self.mejor_racha = max(self.mejor_racha, self.racha_correctas)
-            self.crear_efecto_estrellas((self.ANCHO // 2, self.ALTO // 2))
-        else:
-            mensaje = random.choice(mensajes_incorrecto).format(respuesta=respuesta_correcta)
-            self.racha_correctas = 0
-        self.mostrar_mensaje_temporal(mensaje)
-
-    def mostrar_mensaje_temporal(self, mensaje, tiempo=60):
-        """Activa un mensaje temporal de feedback para mostrar en pantalla."""
-        self.mensaje = mensaje
-        self.tiempo_mensaje = tiempo
-
-    def dibujar_feedback(self):
-        """Dibuja el mensaje de feedback si está activo."""
-        if self.tiempo_mensaje > 0 and self.mensaje:
-            color_msg = (152, 251, 152) if any(x in self.mensaje for x in ["Correcto", "¡Excelente!", "Muy bien", "Genial", "FELICIDADES", "Victoria"]) else (255, 182, 193)
-            
-            # Calcular posición del feedback de manera más robusta
-            # Usar posición fija en la parte inferior de la pantalla
-            ancho = self.sx(500)
-            alto = self.sy(50)
-            x = (self.ANCHO - ancho) // 2
-            y = self.ALTO - self.sy(180)  # Posición fija desde abajo
-            
-            # Asegurar que el feedback esté siempre visible
-            if y < self.navbar_height:
-                y = self.navbar_height + self.sy(10)
-            
-            dibujar_caja_texto(self.pantalla, x, y, ancho, alto, color_msg, radius=self.sy(12))
-            self.mostrar_texto(
-                self.mensaje,
-                x=x,
-                y=y,
-                w=ancho,
-                h=alto,
-                fuente=self.fuente,
-                color=(30, 30, 30),
-                centrado=True
-            )
-            self.tiempo_mensaje -= 1
 
 # Ejemplo de uso para un juego específico
 class JuegoEjemplo(JuegoBase):
@@ -706,9 +595,6 @@ class JuegoEjemplo(JuegoBase):
         # Dibujar operación actual
         self.mostrar_operacion()
         
-        # Dibujar feedback si existe
-        self.dibujar_feedback()
-        
         # Dibujar instrucciones
         instrucciones_rect = self.ui_elements["instrucciones_rect"]
         self.mostrar_texto(
@@ -737,8 +623,6 @@ class JuegoEjemplo(JuegoBase):
         if es_correcta:
             self.puntuacion += 1
             
-        self.mostrar_feedback(es_correcta, self.respuesta_correcta)
-        
         # Generar nueva pregunta
         if self.pregunta_actual < self.total_preguntas:
             self.pregunta_actual += 1
@@ -746,7 +630,7 @@ class JuegoEjemplo(JuegoBase):
             self.opciones = self.generar_opciones(self.respuesta_correcta, 4)
         else:
             # Juego terminado
-            self.mostrar_mensaje_temporal(f"¡Juego terminado! Puntuación final: {self.puntuacion}/{self.total_preguntas}", 120)
+            print(f"¡Juego terminado! Puntuación final: {self.puntuacion}/{self.total_preguntas}")
 
 # Función para probar el sistema responsivo
 def test_responsive_game():

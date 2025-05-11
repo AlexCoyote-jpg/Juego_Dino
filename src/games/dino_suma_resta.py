@@ -122,7 +122,8 @@ class JuegoSumaResta(JuegoBase):
 
         # Feedback y puntaje
         self.dibujar_feedback()
-        self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, frase="Puntuación")
+        self.draw_animacion_estrellas()
+        self.draw_particulas()
 
     def handle_event(self, evento):
         super().handle_event(evento)
@@ -144,7 +145,8 @@ class JuegoSumaResta(JuegoBase):
         self.tiempo_mensaje = tiempo
 
     def update(self, dt=0):
-        pass
+        self.update_animacion_estrellas()
+        self.update_particulas()
 
     def on_resize(self, ancho, alto):
         self.ANCHO = ancho
