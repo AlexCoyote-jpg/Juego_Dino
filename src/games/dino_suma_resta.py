@@ -1,7 +1,7 @@
 import pygame
 import random
 import sys
-from ui.components.utils import Boton, dibujar_caja_texto, mostrar_texto_adaptativo
+from ui.components.utils import Boton, dibujar_caja_texto
 from ui.navigation_bar import NavigationBar
 from core.juego_base import JuegoBase, PALETA
 
@@ -78,8 +78,7 @@ class JuegoSumaResta(JuegoBase):
     def draw(self, surface=None):
         pantalla = surface if surface else self.pantalla
         self.pantalla = pantalla
-        self.dibujar_fondo()
-        self.mostrar_titulo()
+        super().draw(surface)
 
         # Problema en caja decorativa
         texto_problem_y = self.navbar_height + 95
@@ -124,6 +123,8 @@ class JuegoSumaResta(JuegoBase):
         self.dibujar_feedback()
         self.draw_animacion_estrellas()
         self.draw_particulas()
+        # Usa los atributos propios para puntaje y jugadas
+        self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntaje")
 
     def handle_event(self, evento):
         super().handle_event(evento)
@@ -134,17 +135,12 @@ class JuegoSumaResta(JuegoBase):
                     if self.opciones[i] == self.respuesta_correcta:
                         self.puntuacion += 1
                         self.mostrar_feedback(True)
-                        # Efecto de partículas en el centro del botón correcto
                         self.crear_explosion_particulas(boton.rect.centerx, boton.rect.centery)
                     else:
                         self.mostrar_feedback(False, self.respuesta_correcta)
                     self.generar_problema()
                     return True
         return False
-
-    def mostrar_mensaje_temporal(self, mensaje, tiempo=60):
-        self.mensaje = mensaje
-        self.tiempo_mensaje = tiempo
 
     def update(self, dt=0):
         self.update_animacion_estrellas()
