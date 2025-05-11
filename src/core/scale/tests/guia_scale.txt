@@ -86,3 +86,26 @@ if __name__ == "__main__":
     main()
 
 
+🧩 Opcional: Integración con FondoAnimado
+Si usas un fondo animado responsivo:
+
+from core.decoration.background_game import FondoAnimado
+
+fondo = FondoAnimado(screen)
+fondo.set_escaladores(scaler.sx, scaler.sy)
+fondo.resize(800, 600)
+
+Y en tu bucle principal:
+
+scaler.tick()
+fondo.update()
+fondo.draw()
+
+
+🧠 Tips avanzados
+Usa uniform=True si quieres mantener proporciones uniformes en X/Y.
+
+.scale_rect(x, y, w, h) te devuelve un rect escalado.
+
+.sf(size) es ideal para fuentes, íconos o padding que dependa de área.
+
