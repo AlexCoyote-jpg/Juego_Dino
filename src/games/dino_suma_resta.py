@@ -134,6 +134,8 @@ class JuegoSumaResta(JuegoBase):
                     if self.opciones[i] == self.respuesta_correcta:
                         self.puntuacion += 1
                         self.mostrar_feedback(True)
+                        # Efecto de partículas en el centro del botón correcto
+                        self.crear_explosion_particulas(boton.rect.centerx, boton.rect.centery)
                     else:
                         self.mostrar_feedback(False, self.respuesta_correcta)
                     self.generar_problema()
