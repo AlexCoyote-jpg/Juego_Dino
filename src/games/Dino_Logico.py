@@ -118,6 +118,8 @@ class JuegoLogico(JuegoBase):
     def update(self, dt=None):
         if self.tiempo_mensaje > 0:
             self.tiempo_mensaje -= 1
+        self.update_animacion_estrellas()
+        self.update_particulas()
 
     def draw(self, surface):
         self.dibujar_fondo()
@@ -178,6 +180,8 @@ class JuegoLogico(JuegoBase):
 
         # feedback
         self.dibujar_feedback()
+        self.draw_animacion_estrellas()
+        self.draw_particulas()
 
         # puntaje y navbar
         self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntaje")
