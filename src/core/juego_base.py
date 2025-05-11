@@ -7,36 +7,8 @@ from ui.components.utils import (
 from ui.components.emoji import mostrar_alternativo_adaptativo
 from core.decoration.effects import EffectsMixin  # Asegúrate de que la ruta sea correcta
 from core.decoration.background_game import FondoAnimado  # <--- agregado
-
-# Ejemplos para mostrar en mostrar_mensaje_temporal o donde corresponda
-
-# Cuando la respuesta es correcta:
-mensajes_correcto = [
-    "¡Excelente! 🦕✨",
-    "¡Muy bien, Dino está feliz! 🥚🎉",
-    "¡Correcto! ¡Sigue así! 🌟",
-    "¡Genial! ¡Eres un crack de las mates! 🦖"
-]
-
-# Cuando la respuesta es incorrecta:
-mensajes_incorrecto = [
-    "¡Ups! Intenta de nuevo, tú puedes 🦕",
-    "¡No te rindas! La respuesta era {respuesta} 🥚",
-    "¡Casi! Sigue practicando 💪",
-    "¡Ánimo! Dino confía en ti 🦖"
-]
-PALETA = [
-    (244, 67, 54),    # rojo
-    (233, 30, 99),    # rosa
-    (156, 39, 176),   # púrpura
-    (63, 81, 181),    # índigo
-    (33, 150, 243),   # azul claro
-    (0, 188, 212),    # cian
-    (0, 150, 136),    # teal
-    (76, 175, 80),    # verde
-    (255, 235, 59),   # amarillo
-    (255, 152, 0),    # naranja
-]
+from core.decoration.paleta import PALETA_LISTA as PALETA
+from core.scale.responsive_scaler_basic import ResponsiveScaler
 
 # --- Sistema de Escalado Responsivo ---
 class ResponsiveScaler:
