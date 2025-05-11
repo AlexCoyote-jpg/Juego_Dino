@@ -1,6 +1,7 @@
 # Ejemplo de uso para un juego específico
 from core.juego_base import JuegoBase
 import pygame
+import random
 from ui.components.utils import obtener_fuente
 class JuegoEjemplo(JuegoBase):
     def __init__(self, nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
