@@ -169,6 +169,28 @@ class EffectsMixin:
         pygame.draw.polygon(img, color, puntos)
         return img
 
+    def crear_estrella_img_simple(self, tamaño=None, color=(255, 215, 0)):
+        """
+        Crea una imagen de estrella simple para efectos de celebración.
+        Este método replica el efecto clásico de estrella usado en dino_cazador.
+        """
+        tamaño = tamaño or self.sy(15)
+        img = pygame.Surface((tamaño, tamaño), pygame.SRCALPHA)
+        puntos = []
+        for i in range(5):
+            ang = math.pi/2 + i * 2*math.pi/5
+            puntos.append((
+                tamaño//2 + int(tamaño//2 * math.cos(ang)),
+                tamaño//2 - int(tamaño//2 * math.sin(ang))
+            ))
+            ang += math.pi/5
+            puntos.append((
+                tamaño//2 + int(tamaño//5 * math.cos(ang)),
+                tamaño//2 - int(tamaño//5 * math.sin(ang))
+            ))
+        pygame.draw.polygon(img, color, puntos)
+        return img
+
     def crear_efecto_estrellas(self, posicion, cantidad=12, colores=None):
         x, y = posicion
         if not hasattr(self, 'estrella_img') or self.estrella_img is None:
@@ -205,6 +227,31 @@ class EffectsMixin:
         self.tiempo_animacion = 120
         if self.sonido_activado and 'estrella' in self.sounds:
             self.sounds['estrella'].play()
+
+    def crear_efecto_estrellas_simple(self, posicion, cantidad=5):
+        """
+        Crea estrellas para celebrar una respuesta correcta (versión simple).
+        """
+        x, y = posicion
+        if not hasattr(self, 'estrella_img_simple') or self.estrella_img_simple is None:
+            self.estrella_img_simple = self.crear_estrella_img_simple()
+        if not hasattr(self, 'estrellas_simple'):
+            self.estrellas_simple = []
+        for _ in range(cantidad):
+            angulo = random.uniform(0, 2 * math.pi)
+            distancia = random.uniform(self.sy(30), self.sy(100))
+            estrella_x = x + math.cos(angulo) * distancia
+            estrella_y = y + math.sin(angulo) * distancia
+            escala = random.uniform(0.7, 1.3)
+            rotacion = random.uniform(0, 360)
+            vida = random.randint(40, 80)
+            self.estrellas_simple.append({
+                'x': estrella_x, 'y': estrella_y,
+                'escala': escala, 'rotacion': rotacion,
+                'vida': vida, 'max_vida': vida
+            })
+        self.animacion_activa_simple = True
+        self.tiempo_animacion_simple = 60
 
     def crear_particula(self, x, y, color=None, velocidad=None, tamaño=None, vida=None, forma="circulo"):
         if color is None:
@@ -272,6 +319,22 @@ class EffectsMixin:
             if self.tiempo_animacion <= 0:
                 self.animacion_activa = False
 
+    def update_animacion_estrellas_simple(self):
+        """
+        Actualiza la animación de las estrellas simples.
+        """
+        if not hasattr(self, 'estrellas_simple'):
+            self.estrellas_simple = []
+        for s in self.estrellas_simple[:]:
+            s['rotacion'] += 2
+            s['vida'] -= 1
+            if s['vida'] <= 0:
+                self.estrellas_simple.remove(s)
+        if hasattr(self, 'animacion_activa_simple') and self.animacion_activa_simple:
+            self.tiempo_animacion_simple -= 1
+            if self.tiempo_animacion_simple <= 0:
+                self.animacion_activa_simple = False
+
     def update_particulas(self):
         if not hasattr(self, 'particulas'):
             self.particulas = []
@@ -308,6 +371,25 @@ class EffectsMixin:
                 glow.set_alpha(opacidad // 3)
                 glow_rect = glow.get_rect(center=(s['x'], s['y']))
                 self.pantalla.blit(glow, glow_rect)
+            rect = img_rotada.get_rect(center=(s['x'], s['y']))
+            self.pantalla.blit(img_rotada, rect)
+
+    def draw_animacion_estrellas_simple(self):
+        """
+        Dibuja las estrellas animadas simples.
+        """
+        if not hasattr(self, 'estrella_img_simple') or self.estrella_img_simple is None:
+            self.estrella_img_simple = self.crear_estrella_img_simple()
+        if not hasattr(self, 'estrellas_simple'):
+            self.estrellas_simple = []
+        for s in self.estrellas_simple:
+            opacidad = int(255 * (s['vida'] / s['max_vida']))
+            img_rotada = pygame.transform.rotozoom(
+                self.estrella_img_simple,
+                s['rotacion'],
+                s['escala']
+            )
+            img_rotada.set_alpha(opacidad)
             rect = img_rotada.get_rect(center=(s['x'], s['y']))
             self.pantalla.blit(img_rotada, rect)
 

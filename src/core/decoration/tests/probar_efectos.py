@@ -26,15 +26,19 @@ class DummyGame(EffectsMixin):
 
     def update(self):
         self.update_animacion_estrellas()
+        self.update_animacion_estrellas_simple()
         self.update_particulas()
         if random.random() < 0.01:
             self.crear_efecto_estrellas((random.randint(100, self.ANCHO-100), random.randint(100, self.ALTO-100)))
+        if random.random() < 0.01:
+            self.crear_efecto_estrellas_simple((random.randint(100, self.ANCHO-100), random.randint(100, self.ALTO-100)))
         if random.random() < 0.01:
             self.crear_explosion_particulas(random.randint(100, self.ANCHO-100), random.randint(100, self.ALTO-100))
 
     def draw(self):
         self.pantalla.fill((30, 30, 40))
         self.draw_animacion_estrellas()
+        self.draw_animacion_estrellas_simple()
         self.draw_particulas()
         self.dibujar_feedback()
 
