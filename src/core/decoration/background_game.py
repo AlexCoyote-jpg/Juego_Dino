@@ -3,6 +3,7 @@ import random
 import math
 from collections import deque
 from ui.components.utils import get_gradient
+from core.scale.responsive_scaler_animated import ResponsiveScalerAnimado  # agregado
 
 PALETA = {
     "azul_cielo": (90, 200, 250),
@@ -40,20 +41,30 @@ class FondoAnimado:
     def __init__(self, pantalla, navbar_height=0):
         self.pantalla = pantalla
         self.navbar_height = navbar_height
-        self.sx = lambda x: x
-        self.sy = lambda y: y
+
+        # dimensiones y escalador animado interno
+        self.ANCHO = pantalla.get_width()
+        self.ALTO  = pantalla.get_height()
+        self.scaler = ResponsiveScalerAnimado(initial_width=self.ANCHO, initial_height=self.ALTO)  # nuevo
+        self.sx = self.scaler.sx  # funciones de escalado
+        self.sy = self.scaler.sy
+
+        # estado del fondo
         self.burbujas = deque()
-        self.nubes = []
+        self.nubes    = self._generar_nubes(6)
         self.fondo_actual = None
-        self.fondo_cache = None
+        self.fondo_cache   = None
         self.tiempo_burbuja = 0
 
     def set_escaladores(self, sx, sy):
+        """Permite inyectar otro sistema de escala (opcional)."""
         self.sx = sx
         self.sy = sy
 
     def resize(self, ancho, alto):
+        """Llamar en VIDEORESIZE: actualiza tamaño, escalador y nubes."""
         self.ANCHO, self.ALTO = ancho, alto
+        self.scaler.update(ancho, alto)         # nuevo
         self.fondo_cache = None
         self.nubes = self._generar_nubes(6)
 
@@ -61,11 +72,13 @@ class FondoAnimado:
         nubes = []
         for _ in range(cantidad):
             radio = self.sx(60) * random.uniform(1.0, 1.7)
-            surf, offset = generar_nube_surface_eficiente(radio, (255, 255, 255, random.randint(90, 140)))
+            surf, offset = generar_nube_surface_eficiente(
+                radio, (255,255,255, random.randint(90,140))
+            )
             nubes.append({
                 'x': random.randint(0, self.ANCHO),
-                'y': random.randint(self.navbar_height, self.ALTO // 3),
-                'velocidad': random.uniform(0.15, 0.45),
+                'y': random.randint(self.navbar_height, self.ALTO//3),
+                'velocidad': random.uniform(0.15,0.45),
                 'surf': surf,
                 'offset': offset,
                 'w': surf.get_width()
@@ -73,6 +86,8 @@ class FondoAnimado:
         return nubes
 
     def update(self):
+        """Llamar cada frame antes de draw()."""
+        self.scaler.tick()           # nuevo: avanza animación de escala
         self._actualizar_nubes()
         self._actualizar_burbujas()
 

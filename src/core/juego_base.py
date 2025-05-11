@@ -6,6 +6,7 @@ from ui.components.utils import (
 )
 from ui.components.emoji import mostrar_alternativo_adaptativo
 from core.decoration.effects import EffectsMixin  # Asegúrate de que la ruta sea correcta
+from core.decoration.background_game import FondoAnimado  # <--- agregado
 
 # Ejemplos para mostrar en mostrar_mensaje_temporal o donde corresponda
 
@@ -212,6 +213,11 @@ class JuegoBase(EffectsMixin):
         self.animacion_activa = False
         self.tiempo_animacion = 0
 
+        # --- Inicializar FondoAnimado ---
+        self.fondo_animado = FondoAnimado(self.pantalla, self.navbar_height)
+        self.fondo_animado.set_escaladores(self.sx, self.sy)
+        self.fondo_animado.resize(self.ANCHO, self.ALTO)
+
     def mostrar_racha(self, rect=None):
         """Muestra la racha actual y la mejor racha en pantalla."""
         if rect is None:
@@ -282,10 +288,11 @@ class JuegoBase(EffectsMixin):
         pass
 
     def dibujar_fondo(self):
-        """Dibuja el fondo respetando la barra de navegación."""
+        """Dibuja el fondo animado respetando la barra de navegación."""
         if self.pantalla:
-            self.pantalla.fill((255, 255, 255))
-            # Puedes dibujar aquí un área reservada para la navbar si lo deseas
+            # En lugar de un fill estático, uso FondoAnimado
+            self.fondo_animado.update()
+            self.fondo_animado.draw()
 
     def mostrar_texto(self, texto, x, y, w, h, fuente=None, color=(30,30,30), centrado=False):
         """Muestra texto adaptativo en pantalla con coordenadas escaladas."""
@@ -505,6 +512,10 @@ class JuegoBase(EffectsMixin):
             # Reinicializar elementos UI responsivos
             self.init_responsive_ui()
             
+            # --- Actualizar FondoAnimado ---
+            self.fondo_animado.set_escaladores(self.sx, self.sy)
+            self.fondo_animado.resize(self.ANCHO, self.ALTO)
+            
             # Llamar al método específico de cada juego
             self.on_resize(self.ANCHO, self.ALTO)
             
@@ -522,12 +533,15 @@ class JuegoBase(EffectsMixin):
         pass
 
     def update(self, dt=None):
+        # Actualizo fondo animado antes de la lógica específica
+        self.fondo_animado.update()
         # Para ser sobrescrito por cada juego
-        pass
 
     def draw(self, surface):
+        # Dibujo fondo y luego dejo que cada juego dibuje lo suyo
+        surface = surface or self.pantalla
+        self.dibujar_fondo()
         # Para ser sobrescrito por cada juego
-        pass
 
 # Ejemplo de uso para un juego específico
 class JuegoEjemplo(JuegoBase):
