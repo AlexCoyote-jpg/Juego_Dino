@@ -33,6 +33,8 @@ class JuegoRescate(JuegoBase):
         self.feedback = ""
         self.feedback_color = (0, 120, 0)
         self.tiempo_feedback = 0
+        self.racha_correctas = 0
+        self.mejor_racha = 0
         self.cargar_imagenes()
         self.generar_problema()
 
@@ -70,12 +72,18 @@ class JuegoRescate(JuegoBase):
                     if int(btn.texto) == self.respuesta_correcta:
                         self.puntuacion += 1
                         self.posicion_dino += 1
+                        # Incrementa la racha y actualiza la mejor racha
+                        self.racha_correctas += 1
+                        if self.racha_correctas > self.mejor_racha:
+                            self.mejor_racha = self.racha_correctas
                         self.mostrar_feedback(True)
-                        # En lugar de finalizar, se reinicia el avance al pasarse el total
+                        # Reinicia el avance al pasarse el total
                         if self.posicion_dino > self.total_pasos:
                             self.posicion_dino = 0
                         self.generar_problema()
                     else:
+                        # En caso de error, se reinicia la racha
+                        self.racha_correctas = 0
                         self.mostrar_feedback(False, self.respuesta_correcta)
                     break
 
