@@ -30,9 +30,11 @@ class JuegoRescate(JuegoBase):
         self.jugadas_totales = 0
         self.posicion_dino = 0
         self.total_pasos = 3
-        self.feedback = ""
-        self.feedback_color = (0, 120, 0)
-        self.tiempo_feedback = 0
+        # Se utiliza el sistema de feedback y animaciones de JuegoBase:
+        self.mensaje = ""
+        self.tiempo_mensaje = 0
+        self.mensaje_color = (255, 255, 255, 220)
+        self.mensaje_animacion = 1.0
         self.racha_correctas = 0
         self.mejor_racha = 0
         self.cargar_imagenes()
@@ -40,7 +42,7 @@ class JuegoRescate(JuegoBase):
 
     def cargar_imagenes(self):
         # Guardamos las imágenes según las claves preestablecidas.
-        self.dino_mama_img = self.images.get("dino5")   # Se usará solo para dibujar a la izquierda
+        self.dino_mama_img = self.images.get("dino5")   # Solo se usará para dibujar a la izquierda
         self.dino_bebe_img = self.images.get("dino2")     # Se usará para dibujar a la derecha
         self.roca_img = self.images.get("roca")           # Imagen para las rocas centrales
 
@@ -51,17 +53,18 @@ class JuegoRescate(JuegoBase):
         self.respuesta_correcta = respuesta
         self.opciones = self.generar_opciones(self.respuesta_correcta, cantidad=3)
         random.shuffle(self.opciones)
-        self.feedback = ""
-        self.tiempo_feedback = 0
+        self.mensaje = ""
+        self.tiempo_mensaje = 0
 
+    # Ahora se usa el feedback de la clase base
     def mostrar_feedback(self, correcto, respuesta_correcta=None):
         if correcto:
-            self.feedback = "¡Correcto!"
-            self.feedback_color = (0, 120, 0)
+            self.mensaje = "¡Correcto!"
+            self.mensaje_color = (0, 120, 0)
         else:
-            self.feedback = f"Incorrecto. Respuesta: {respuesta_correcta}"
-            self.feedback_color = (180, 40, 40)
-        self.tiempo_feedback = 60  # Duración en frames
+            self.mensaje = f"Incorrecto. Respuesta: {respuesta_correcta}"
+            self.mensaje_color = (180, 40, 40)
+        self.tiempo_mensaje = 60  # duración en frames
 
     def handle_event(self, evento):
         super().handle_event(evento)
@@ -72,33 +75,34 @@ class JuegoRescate(JuegoBase):
                     if int(btn.texto) == self.respuesta_correcta:
                         self.puntuacion += 1
                         self.posicion_dino += 1
-                        # Incrementa la racha y actualiza la mejor racha
                         self.racha_correctas += 1
                         if self.racha_correctas > self.mejor_racha:
                             self.mejor_racha = self.racha_correctas
                         self.mostrar_feedback(True)
-                        # Reinicia el avance al pasarse el total
                         if self.posicion_dino > self.total_pasos:
                             self.posicion_dino = 0
                         self.generar_problema()
                     else:
-                        # En caso de error, se reinicia la racha
                         self.racha_correctas = 0
                         self.mostrar_feedback(False, self.respuesta_correcta)
                     break
 
     def update(self, dt=None):
         super().update(dt)
-        if self.tiempo_feedback:
-            self.tiempo_feedback -= 1
-            if self.tiempo_feedback <= 0:
-                self.feedback = ""
+        # Actualiza el countdown del feedback (el cual se dibuja en JuegoBase)
+        if self.tiempo_mensaje:
+            self.tiempo_mensaje -= 1
+            if self.tiempo_mensaje <= 0:
+                self.mensaje = ""
+        # Actualiza animaciones desde JuegoBase (ej: estrellas y partículas)
+        self.update_animacion_estrellas()
+        self.update_particulas()
 
     def draw(self, surface=None):
         destino = surface if surface is not None else self.pantalla
         self.dibujar_fondo()
 
-        # Variables locales para mayor eficiencia
+        # Variables locales para escalado
         sx = self.sx
         sy = self.sy
         sf = self.sf
@@ -129,16 +133,15 @@ class JuegoRescate(JuegoBase):
         roca_h = sy(60)
         dino_w = sx(80)
         dino_h = sy(80)
-        # Ancho total del bloque: dino_mama + espacio + (total_pasos * roca_espacio) + espacio + dino_bebe
         block_width = dino_w + sx(30) + self.total_pasos * roca_espacio + sx(30) + dino_w
         start_x = (self.ANCHO - block_width) // 2
 
-        # Dibujar mamá dino (solo a la izquierda)
+        # Dibujar mamá dino (a la izquierda)
         if self.dino_mama_img:
             img_mama = pygame.transform.smoothscale(self.dino_mama_img, (int(dino_w), int(dino_h)))
             destino.blit(img_mama, (start_x, area_img_y + area_img_h//2 - dino_h//2))
 
-        # Dibujar rocas (centradas)
+        # Dibujar rocas centrales
         roca_start_x = start_x + dino_w + sx(30)
         if self.roca_img:
             img_roca = pygame.transform.smoothscale(self.roca_img, (int(roca_w), int(roca_h)))
@@ -146,7 +149,7 @@ class JuegoRescate(JuegoBase):
                 x = roca_start_x + i * roca_espacio
                 destino.blit(img_roca, (x, area_img_y + area_img_h//2 - roca_h//2))
 
-        # Dibujar bebé dino (derecha)
+        # Dibujar bebé dino (a la derecha)
         bebe_x = roca_start_x + self.total_pasos * roca_espacio + sx(30)
         if self.dino_bebe_img:
             img_bebe = pygame.transform.smoothscale(self.dino_bebe_img, (int(dino_w), int(dino_h)))
@@ -166,23 +169,15 @@ class JuegoRescate(JuegoBase):
             centrado=True
         )
 
-        # Dibujar opciones (botones)
+        # Dibujar opciones (los botones se dibujan vía método base)
         opciones_y = enunciado_y + enunciado_h + sy(10)
         self.dibujar_opciones(y0=opciones_y)
 
-        # Mostrar feedback debajo de las opciones
-        if self.feedback:
-            self.mostrar_texto(
-                self.feedback,
-                x=margen_x,
-                y=opciones_y + sy(60),
-                w=ancho_area,
-                h=sy(40),
-                fuente=obtener_fuente(sf(20), negrita=True),
-                color=self.feedback_color,
-                centrado=True
-            )
+        # Invocar el feedback y las animaciones definidos en JuegoBase
+        self.dibujar_feedback()         # Muestra el mensaje de feedback si existe
+        self.draw_animacion_estrellas()  # Dibuja la animación de estrellas (si está implementada)
+        self.draw_particulas()           # Dibuja las partículas de explosión (si están implementadas)
 
-        # Mostrar puntaje y racha con helpers de la clase base
+        # Mostrar puntaje y racha
         self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntuación")
         self.mostrar_racha()
