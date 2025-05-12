@@ -45,8 +45,17 @@ def elementos(caja, juego, recursos, cx, cy, tam_caja, fuente):
     )
 
 def renderizar_celda(caja, juego, recursos, fuente, x, y, tam, color, radio):
+    """
+    Renderiza una celda (tarjeta) con estilo minimalista y Apple-like.
+    Dibuja una caja redondeada con un sutil contorno y luego incorpora los elementos (imagen y texto)
+    sobre ella.
+    """
     from ui.components.utils import dibujar_caja_texto
+    # Dibujar la tarjeta con bordes redondeados (fondo de la celda)
     dibujar_caja_texto(caja, x, y, tam, tam, color=color, radius=radio)
+    # Añadir un borde sutil para dar mayor definición al contorno de la tarjeta
+    pygame.draw.rect(caja, (220, 220, 220), pygame.Rect(x, y, tam, tam), width=1, border_radius=radio)
+    # Renderizar el contenido de la tarjeta (imagen y nombre)
     elementos(caja, juego, recursos, x, y, tam, fuente)
 
 def animar_dinos(pantalla, imagenes_dinos, posiciones, escala, tiempo_ms, velocidad=1.0):
@@ -97,89 +106,81 @@ def dibujar_caja_juegos(surface, x, y, w, h, juegos, recursos,
                          margen=16, tam_caja_default=120, fuente=None, on_hover=None,
                          num_cols=3, num_rows=2):
     """
-    Dibuja una caja con una cuadrícula de juegos al estilo Apple, con bordes redondeados
-    y sombras sutiles para cada celda, aplicando un efecto de hover minimalista.
+    Dibuja una caja con una cuadrícula de juegos al estilo Apple, con bordes 
+    redondeados, sombras sutiles y un efecto de hover minimalista.
     
     Parámetros:
-        surface: Superficie donde se dibuja la caja.
+        surface: Superficie destino donde se dibuja la caja.
         x, y: Coordenadas de la esquina superior izquierda de la caja.
         w, h: Ancho y alto de la caja.
         juegos: Lista de juegos (diccionarios) a mostrar.
-        recursos: Diccionario de recursos, por ejemplo, imágenes.
-        color: Color de fondo de la caja. (Apple: muy claro)
+        recursos: Diccionario de recursos (por ejemplo, imágenes).
+        color: Color de fondo (muy claro para estilo Apple).
         alpha: Transparencia del fondo (0 = opaco).
-        radius: Radio de las esquinas para un efecto redondeado.
-        margen: Espacio entre las celdas de la cuadrícula.
-        tam_caja_default: Tamaño por defecto de celda (se recalcula según w y h).
-        fuente: Fuente para el texto; se asigna una por defecto si es None.
-        on_hover: Función callback que se invoca al hacer hover (índice, rectángulo absoluto).
+        radius: Radio de las esquinas (redondeado).
+        margen: Espacio entre celdas.
+        tam_caja_default: Tamaño de celda por defecto (se recalcula).
+        fuente: Fuente para el texto; si es None se asigna una por defecto.
+        on_hover: Callback al hacer hover (índice, rectángulo absoluto).
         num_cols: Número máximo de columnas.
         num_rows: Número máximo de filas.
-    
+        
     Retorna:
         Lista de rectángulos absolutos que definen las celdas dibujadas.
     """
-    # Crear la superficie 'caja' con soporte de alpha si se especifica
+    # Crear la superficie de la "caja" con soporte alpha si se indica
     caja = get_surface(w, h, alpha=alpha > 0)
-    # Fondo minimalista con leve transparencia si se indica
     caja.fill((*color, alpha) if alpha > 0 else color)
-    # Dibujar un contorno sutil para simular el look "Apple"
     pygame.draw.rect(caja, (220, 220, 220), caja.get_rect(), width=1, border_radius=radius)
     
-    # Calcular el tamaño de cada celda basado en el espacio y márgenes disponibles
+    # Calcular dimensiones de celda
     cell_width = (w - (num_cols + 1) * margen) // num_cols
     cell_height = (h - (num_rows + 1) * margen) // num_rows
     cell_size = min(cell_width, cell_height)
     
-    # Ajustar la cuadrícula según la cantidad de juegos disponibles
+    # Determinar cantidad de celdas a dibujar y centrar la cuadrícula
     cols = min(num_cols, len(juegos))
-    rows = min(num_rows, math.ceil(len(juegos) / cols))
+    rows = min(num_rows, -(-len(juegos) // cols))  # ceil division
     max_juegos = min(cols * rows, len(juegos))
     
-    # Calcular el ancho y alto total de la cuadrícula y los offsets para centrarla
     total_grid_width = cols * cell_size + (cols - 1) * margen
     total_grid_height = rows * cell_size + (rows - 1) * margen
-    offset_x = max(0, (w - total_grid_width) // 2)
-    offset_y = max(0, (h - total_grid_height) // 2)
+    offset_x = (w - total_grid_width) // 2
+    offset_y = (h - total_grid_height) // 2
     
-    # Asignar una fuente predeterminada si no se proporcionó una
     if fuente is None:
         fuente = pygame.font.SysFont("San Francisco", 22, bold=True)
     
     rects = []
     mouse_x, mouse_y = pygame.mouse.get_pos()
-    # Se obtienen las coordenadas absolutas para el hover
-    for idx, juego in enumerate(juegos[:max_juegos]):
+    
+    for idx in range(max_juegos):
         col = idx % cols
         row = idx // cols
-        cell_x = offset_x + col * (cell_size + margen)
-        cell_y = offset_y + row * (cell_size + margen)
-        abs_rect = pygame.Rect(x + cell_x, y + cell_y, cell_size, cell_size)
+        local_x = offset_x + col * (cell_size + margen)
+        local_y = offset_y + row * (cell_size + margen)
+        abs_rect = pygame.Rect(x + local_x, y + local_y, cell_size, cell_size)
         rects.append(abs_rect)
     
-        # Dibujar sombra sutil para cada celda
-        shadow_rect = pygame.Rect(cell_x + 2, cell_y + 2, cell_size, cell_size)
-        shadow_surf = get_surface(cell_size, cell_size, alpha=True)
-        shadow_color = (0, 0, 0, 30)  # sombra muy sutil
-        pygame.draw.rect(shadow_surf, shadow_color, shadow_surf.get_rect(), border_radius=radius-4)
-        caja.blit(shadow_surf, (shadow_rect.x, shadow_rect.y))
+        # Dibujar sombra sutil para profundidad
+        shadow = get_surface(cell_size, cell_size, alpha=True)
+        pygame.draw.rect(shadow, (0, 0, 0, 30), shadow.get_rect(), border_radius=radius-4)
+        caja.blit(shadow, (local_x + 2, local_y + 2))
     
-        # Detectar hover usando coordenadas absolutas
         is_hover = abs_rect.collidepoint(mouse_x, mouse_y)
         hover_state = actualizar_hover_state(idx, is_hover)
     
         if hover_state > 0:
-            scale = 1.0 + 0.1 * hover_state  # efecto de escala suave
+            scale = 1.0 + 0.1 * hover_state
             render_size = int(cell_size * scale)
-            render_x = cell_x - (render_size - cell_size) // 2
-            render_y = cell_y - (render_size - cell_size) // 2
-            border_radius = radius if hover_state > 0.9 else (radius - 4)
-            # Usamos un color de celda ligeramente diferente al hacer hover
-            renderizar_celda(caja, juego, recursos, fuente, render_x, render_y, render_size, (210, 225, 245), border_radius)
+            render_x = local_x - (render_size - cell_size) // 2
+            render_y = local_y - (render_size - cell_size) // 2
+            br = radius if hover_state > 0.9 else radius - 4
+            renderizar_celda(caja, juegos[idx], recursos, fuente, render_x, render_y, render_size, (210, 225, 245), br)
             if is_hover and on_hover:
                 on_hover(idx, abs_rect)
         else:
-            renderizar_celda(caja, juego, recursos, fuente, cell_x, cell_y, cell_size, (230, 240, 255), radius-4)
+            renderizar_celda(caja, juegos[idx], recursos, fuente, local_x, local_y, cell_size, (230, 240, 255), radius-4)
     
     surface.blit(caja, (x, y))
     return rects
