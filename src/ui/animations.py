@@ -179,11 +179,11 @@ def dibujar_caja_juegos(surface, x, y, w, h, juegos, recursos,
             render_x = local_x - (render_size - cell_size) // 2
             render_y = local_y - (render_size - cell_size) // 2
             br = radius if hover_state > 0.9 else radius - 4
-            renderizar_celda(caja, juegos[idx], recursos, fuente, render_x, render_y, render_size, (210, 225, 245), br)
+            renderizar_celda(caja, juegos[idx], recursos, fuente, render_x, render_y, render_size, (200, 230, 255), br)
             if is_hover and on_hover:
                 on_hover(idx, abs_rect)
         else:
-            renderizar_celda(caja, juegos[idx], recursos, fuente, local_x, local_y, cell_size, (230, 240, 255), radius-4)
+            renderizar_celda(caja, juegos[idx], recursos, fuente, local_x, local_y, cell_size, (180, 200, 230), radius-4)
     
     surface.blit(caja, (x, y))
     return rects
