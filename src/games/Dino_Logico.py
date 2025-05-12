@@ -127,66 +127,71 @@ class JuegoLogico(JuegoBase):
         self.dibujar_fondo()
         self.mostrar_titulo()
 
-        # --- Mejoras para el enunciado del problema ---
-        enunciado_y = self.navbar_height + 100  # Debajo del título
-        enunciado_h = max(90, int(self.ALTO * 0.13))
-        enunciado_fuente = obtener_fuente(max(38, int(self.ALTO * 0.045)), negrita=True)
+        # Precompute common scaling values
+        margin_left = self.sx(50)
+        gap = self.sx(30)
+        nav_offset = self.sy(100)
+        content_y = self.navbar_height + nav_offset
 
-        # Opcional: dibujar una caja suave de fondo para el enunciado
+        # Dibujar imagen de dinosaurio (si existe)
+        dino_width = 0
+        if self.dino_img:
+            dino_width = int(self.ANCHO * 0.15)
+            ow, oh = self.dino_img.get_size()
+            dino_height = int(oh * dino_width / ow)
+            dino_scaled = pygame.transform.smoothscale(self.dino_img, (dino_width, dino_height))
+            self.pantalla.blit(dino_scaled, (margin_left, content_y))
+
+        # Dibujar caja de problema a la derecha de la imagen de dino
+        text_x = margin_left + dino_width + gap
+        text_y = content_y
+        text_w = self.ANCHO - text_x - margin_left
+        text_h = max(self.sy(100), int(self.ALTO * 0.15))
         dibujar_caja_texto(
             self.pantalla,
-            40, enunciado_y,
-            self.ANCHO - 80, enunciado_h,
-            color=(255, 255, 240, 220),
-            radius=18
+            text_x, text_y,
+            text_w, text_h,
+            color=(255, 255, 240, 230),
+            radius=self.sx(20)
         )
-
+        enunciado_fuente = obtener_fuente(max(self.sf(40), int(self.ALTO * 0.05)), negrita=True)
         self.mostrar_texto(
             self.problema_actual,
-            x=40,
-            y=enunciado_y,
-            w=self.ANCHO - 80,
-            h=enunciado_h,
+            x=text_x,
+            y=text_y,
+            w=text_w,
+            h=text_h,
             fuente=enunciado_fuente,
             color=(30, 30, 30),
             centrado=True
         )
 
-        # opciones
-        opciones_y = enunciado_y + enunciado_h + 30  # Espacio debajo del enunciado
+        # Dibujar las opciones de respuesta
+        opciones_y = text_y + text_h + self.sy(40)
         self.dibujar_opciones(y0=opciones_y)
 
-        # — Dino pequeño a la izquierda del primer botón —
-        if self.opcion_botones and self.dino_img:
-            nuevo_w = int(self.ANCHO * 0.15)
-            ow, oh = self.dino_img.get_size()
-            nuevo_h = int(oh * nuevo_w / ow)
-            dino_small = pygame.transform.smoothscale(self.dino_img, (nuevo_w, nuevo_h))
-            first_btn = self.opcion_botones[0]
-            x_dino = max(10, first_btn.rect.left - nuevo_w - 10)
-            y_dino = first_btn.rect.centery - nuevo_h // 2
-            self.pantalla.blit(dino_small, (x_dino, y_dino))
-
-        # — Mapa pequeño debajo de los botones —
-        if self.mapa_img:
-            map_w, map_h = self.mapa_img.get_size()
-            nuevo_map_w = int(self.ANCHO * 0.25)
-            nuevo_map_h = int(map_h * nuevo_map_w / map_w)
-            mapa_small = pygame.transform.smoothscale(self.mapa_img, (nuevo_map_w, nuevo_map_h))
-            if self.opcion_botones:
-                y_map = self.opcion_botones[-1].rect.bottom + 10
-            else:
-                y_map = self.navbar_height + 10
-            x_map = self.ANCHO - nuevo_map_w - 20
-            self.pantalla.blit(mapa_small, (x_map, y_map))
-
-        # feedback
+        # Dibujar feedback y animaciones adicionales
         self.dibujar_feedback()
         self.draw_animacion_estrellas()
         self.draw_particulas()
 
-        # puntaje y navbar
+        # Mostrar puntaje
         self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntaje")
+
+        # Dibujar el mapa en la esquina inferior derecha, justo arriba de la racha
+        if self.mapa_img:
+            map_width = int(self.ANCHO * 0.15)
+            ow, oh = self.mapa_img.get_size()
+            map_height = int(oh * map_width / ow)
+            map_x = self.ANCHO - map_width - self.sx(20)
+            map_y = self.ALTO - map_height - self.sy(100)
+            self.pantalla.blit(
+                pygame.transform.smoothscale(self.mapa_img, (map_width, map_height)),
+                (map_x, map_y)
+            )
+
+        # Mostrar la racha
+        self.mostrar_racha()
 
 
 
