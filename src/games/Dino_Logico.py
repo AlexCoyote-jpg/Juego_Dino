@@ -48,53 +48,88 @@ class JuegoLogico(JuegoBase):
         self.tiempo_mensaje = 0
         self.mensaje = ""
 
-
     def generar_problema_logico_basico(self):
+        """Genera 6 problemas básicos de lógica matemática."""
         nombre = random.choice(self.NOMBRES)
         obj = random.choice(self.OBJETOS)
-        n, x, y, f, c = [random.randint(lo, hi) for lo,hi in ((5,15),(3,8),(3,7),(20,40),(2,5))]
+        # Aseguramos que 'n' sea al menos 6 para evitar respuestas negativas
+        n = random.randint(6, 15)
+        x = random.randint(3, 8)
+        y = random.randint(3, 7)
+        f = random.randint(20, 40)
+        c = random.randint(2, 5)
         lista = [
-            (f"{nombre} dio 1 {obj} a cada uno de sus {n} amigos en la primera fiesta y 2 en la segunda.\n ¿Cuántos {obj} dio en total?",
-             n*3, f"Suma 1×{n} + 2×{n} = 3×{n}."),
-            (f"{nombre} plantó {x} árboles cada día durante {y} días.\n ¿Cuántos en total?",
-             x*y, f"{x} × {y}."),
-            (f"{nombre} tenía {f} frutas y las repartió en {c} canastas iguales.\n ¿Cuántas por canasta?",
-             f//c, f"{f} ÷ {c}.")
+            (f"{nombre} tiene {n} {obj}. Si da 2 {obj} a cada uno de sus 3 amigos,\n¿Cuántos {obj} le quedarán?",
+             n - (2 * 3), f"Multiplica: 2 × 3 = 6, luego resta: {n} - 6 = {n - 6}."),
+            (f"{nombre} plantó {x} árboles cada día durante {y} días.\n¿Cuántos árboles plantó en total?",
+             x * y, f"Multiplica: {x} × {y} = {x * y}."),
+            (f"{nombre} tiene {f} frutas y las repartió en {c} canastas iguales.\n¿Cuántas frutas hay en cada canasta?",
+             f // c, f"Divide: {f} ÷ {c} = {f // c}."),
+            (f"{nombre} compró {n} cajas de {obj}, cada una con {x} unidades.\n¿Cuántos {obj} compró en total?",
+             n * x, f"Multiplica: {n} × {x} = {n * x}."),
+            (f"{nombre} tenía {f} caramelos y comió {c} cada día durante {y} días.\n¿Cuántos caramelos le quedan?",
+             f - (c * y), f"Multiplica: {c} × {y} = {c * y}, luego resta: {f} - {c * y} = {f - (c * y)}."),
+            (f"{nombre} quiere dividir {f} galletas entre {c} amigos.\n¿Cuántas galletas recibirá cada amigo?",
+             f // c, f"Divide: {f} ÷ {c} = {f // c}.")
         ]
         return random.choice(lista)
 
     def generar_problema_logico_medio(self):
+        """Genera 6 problemas de dificultad media de lógica matemática."""
         nombre = random.choice(self.NOMBRES)
         a = random.randint(2, 5)
         f = random.randint(5, 15)
         m = random.randint(10, 30)
         d = random.randint(2, 5)
         am = random.randint(3, 8)
-        total = random.randint(6, 14)
-        pos = random.randint(2, 4)
-        problemas = [
-            (f"{nombre} y sus {a} amigos fueron a recoger frutas. Cada uno recogió {f} frutas, pero luego decidieron repartirlas equitativamente.\n ¿Cuántas frutas recibió cada uno?", f, f"Multiplica {f} × {a+1} y divide entre {a+1}."),
-            (f"{nombre} tiene {m} monedas. Si da {d} monedas a cada amigo y tiene {am} amigos,\n ¿cuántas monedas le quedarán?", m - (d * am), f"Multiplica {d} × {am} y réstalo de {m}."),
-            (f"{nombre} y sus amigos están formados en un círculo. Si hay {total} dinosaurios en total y {nombre} es el número {pos},\n ¿qué número es el dinosaurio que está exactamente al frente de {nombre}?", (pos + total // 2) % total if total % 2 == 0 else 1, f"Suma la mitad de {total} a {pos} y aplica módulo {total}.")
+        # Para el problema del círculo, forzamos que el total sea par
+        total = random.randint(3, 7) * 2  
+        # Usamos etiquetas de 1 a total para mayor claridad
+        pos = random.randint(1, total)
+        lista = [
+            (f"{nombre} y sus {a} amigos fueron a recoger frutas. Cada uno recogió {f} frutas.\n¿Cuántas frutas recogieron en total?",
+             f * (a + 1), f"Multiplica: {f} × {a + 1} = {f * (a + 1)}."),
+            (f"{nombre} tiene {m} monedas. Si da {d} monedas a cada amigo y tiene {am} amigos,\n¿Cuántas monedas le quedarán?",
+             m - (d * am), f"Multiplica: {d} × {am} = {d * am}, luego resta: {m} - {d * am} = {m - (d * am)}."),
+            (f"{nombre} y sus amigos están formados en un círculo. Si hay {total} dinosaurios en total y {nombre} es el número {pos},\n¿Cuál es el número del dinosaurio que está frente a {nombre}?",
+             (pos + total//2 - 1) % total + 1,
+             f"Suma la mitad de {total} a {pos}, resta 1, aplica módulo {total} y suma 1."),
+            (f"{nombre} tiene {m} caramelos y quiere repartirlos en bolsas de {d} caramelos cada una.\n¿Cuántas bolsas puede llenar completamente?",
+             m // d, f"Divide: {m} ÷ {d} = {m // d}."),
+            (f"{nombre} compró {a} cajas de {f} galletas cada una. Luego regaló {d} galletas.\n¿Cuántas galletas le quedan?",
+             (a * f) - d, f"Multiplica: {a} × {f} = {a * f}, luego resta: {a * f} - {d} = {(a * f) - d}."),
+            (f"{nombre} tiene {total} amigos y quiere darles {pos} caramelos a cada uno.\n¿Cuántos caramelos necesita en total?",
+             total * pos, f"Multiplica: {total} × {pos} = {total * pos}.")
         ]
-        return random.choice(problemas)
+        return random.choice(lista)
 
     def generar_problema_logico_avanzado(self):
+        """Genera 6 problemas avanzados de lógica matemática."""
         nombre = random.choice(self.NOMBRES)
         a = random.randint(3, 6)
         p = random.randint(2, 3)
         l = random.randint(5, 10)
-        total = random.randint(5, 10)
+        # Para el problema del círculo, forzamos que el total sea par
+        total = random.randint(3, 7) * 2  
         salto = random.randint(2, 3)
         m = random.randint(20, 40)
         s = random.randint(4, 8)
-        problemas = [
-            (f"{nombre} organiza una carrera con {a} amigos. Si cada uno corre a una velocidad diferente y {nombre} llega en la posición {p},\n ¿cuántos dinosaurios llegaron después de él?", a - p + 1, f"Resta la posición de {nombre} a los participantes: {a} - {p} + 1."),
-            (f"{nombre} tiene un jardín cuadrado con {l} metros por lado. Quiere plantar flores en el borde, poniendo una flor cada metro.\n ¿Cuántas flores necesitará?", l * 4, f"El perímetro es 4 × {l}."),
-            (f"{nombre} y sus amigos están jugando a pasarse una pelota. Son {total} dinosaurios en total, formados en círculo. Si cada uno pasa la pelota al dinosaurio que está {salto} posiciones a su derecha,\n ¿cuántos pases se necesitan para que la pelota vuelva al dinosaurio que la lanzó primero?", total // math.gcd(total, salto), f"El mínimo número de pases es {total} dividido por el MCD de {total} y {salto}."),
-            (f"{nombre} tiene {m} monedas y quiere repartirlas en sobres de {s} monedas cada uno.\n ¿Cuántos sobres puede llenar completamente?", m // s, f"Divide {m} entre {s}.")
+        lista = [
+            (f"{nombre} organiza una carrera con {a} amigos. Si cada uno corre a una velocidad diferente y {nombre} llega en la posición {p},\n¿Cuántos dinosaurios llegaron después de él?",
+             a - p + 1, f"Resta la posición de {nombre} a los participantes: {a} - {p} + 1 = {a - p + 1}."),
+            (f"{nombre} tiene un jardín cuadrado con {l} metros por lado. Quiere plantar flores en el borde, poniendo una flor cada metro.\n¿Cuántas flores necesitará?",
+             l * 4, f"El perímetro es 4 × {l} = {l * 4}."),
+            (f"{nombre} y sus amigos están jugando a pasarse una pelota. Son {total} dinosaurios en total, formados en círculo. Si cada uno pasa la pelota al dinosaurio que está {salto} posiciones a su derecha,\n¿Cuántos pases se necesitan para que la pelota vuelva al dinosaurio que la lanzó primero?",
+             total // math.gcd(total, salto),
+             f"El mínimo número de pases es {total} dividido por el MCD de {total} y {salto}."),
+            (f"{nombre} tiene {m} monedas y quiere repartirlas en sobres de {s} monedas cada uno.\n¿Cuántos sobres puede llenar completamente?",
+             m // s, f"Divide: {m} ÷ {s} = {m // s}."),
+            (f"{nombre} quiere construir una cerca alrededor de un terreno rectangular de {l} metros de largo y {p} metros de ancho.\n¿Cuántos metros de cerca necesita?",
+             2 * (l + p), f"El perímetro es 2 × ({l} + {p}) = {2 * (l + p)}."),
+            (f"{nombre} tiene {m} caramelos y quiere repartirlos entre {s} amigos de forma equitativa.\n¿Cuántos caramelos recibirá cada uno?",
+             m // s, f"Divide: {m} ÷ {s} = {m // s}.")
         ]
-        return random.choice(problemas)
+        return random.choice(lista)
 
     def handle_event(self, evento):
         super().handle_event(evento)
