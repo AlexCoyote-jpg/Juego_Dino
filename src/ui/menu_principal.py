@@ -132,7 +132,7 @@ class MenuPrincipal:
             alpha=30,
             radius=24,
             margen=24,
-            tam_caja=160,
+            tam_caja_default=160,  # Updated parameter name to match animations.py
             fuente=self.fonts["texto"]
         )
 

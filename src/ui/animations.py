@@ -94,56 +94,84 @@ def animar_dinos(pantalla, imagenes_dinos, posiciones, escala, tiempo_ms, veloci
 
 def dibujar_caja_juegos(surface, x, y, w, h, juegos, recursos,
                          color=(255, 255, 255), alpha=0, radius=0,
-                         margen=24, tam_caja=120, fuente=None, on_hover=None,
+                         margen=24, tam_caja_default=120, fuente=None, on_hover=None,
                          num_cols=3, num_rows=2):
-
+    """
+    Dibuja una caja con una cuadrícula de juegos, aplicando efectos de hover.
+    
+    Parámetros:
+        surface: Superficie donde se dibuja la caja.
+        x, y: Coordenadas de la esquina superior izquierda de la caja.
+        w, h: Ancho y alto de la caja.
+        juegos: Lista de juegos (diccionarios) a mostrar.
+        recursos: Diccionario de recursos, por ejemplo, imágenes.
+        color: Color de fondo de la caja.
+        alpha: Transparencia del fondo (0 = opaco).
+        radius: Radio de las esquinas para un efecto redondeado.
+        margen: Espacio entre las celdas de la cuadrícula.
+        tam_caja_default: Tamaño por defecto de celda (se recalcula según w y h).
+        fuente: Fuente para el texto; se asigna una por defecto si es None.
+        on_hover: Función callback que se invoca al hacer hover (índice, rectángulo absoluto).
+        num_cols: Número máximo de columnas.
+        num_rows: Número máximo de filas.
+    
+    Retorna:
+        Lista de rectángulos absolutos que definen las celdas dibujadas.
+    """
+    # Crear la superficie 'caja' con soporte de alpha si se especifica
     caja = get_surface(w, h, alpha=alpha > 0)
     caja.fill((*color, alpha) if alpha > 0 else color)
     pygame.draw.rect(caja, color, caja.get_rect(), border_radius=radius)
-
-    tam_caja_w = (w - (num_cols + 1) * margen) // num_cols
-    tam_caja_h = (h - (num_rows + 1) * margen) // num_rows
-    tam_caja = min(tam_caja_w, tam_caja_h)
-
+    
+    # Calcular el tamaño de cada celda basado en el espacio y márgenes disponibles
+    cell_width = (w - (num_cols + 1) * margen) // num_cols
+    cell_height = (h - (num_rows + 1) * margen) // num_rows
+    cell_size = min(cell_width, cell_height)
+    
+    # Ajustar la cuadrícula según la cantidad de juegos disponibles
     cols = min(num_cols, len(juegos))
     rows = min(num_rows, math.ceil(len(juegos) / cols))
     max_juegos = min(cols * rows, len(juegos))
-
-    total_w = cols * tam_caja + (cols - 1) * margen
-    total_h = rows * tam_caja + (rows - 1) * margen
-    offset_x = max(0, (w - total_w) // 2)
-    offset_y = max(0, (h - total_h) // 2)
-
+    
+    # Calcular el ancho y alto total de la cuadrícula y los offsets para centrarla
+    total_grid_width = cols * cell_size + (cols - 1) * margen
+    total_grid_height = rows * cell_size + (rows - 1) * margen
+    offset_x = max(0, (w - total_grid_width) // 2)
+    offset_y = max(0, (h - total_grid_height) // 2)
+    
+    # Asignar una fuente predeterminada si no se proporcionó una
     if fuente is None:
         fuente = pygame.font.SysFont("Segoe UI", 22, bold=True)
-
+    
+    # Obtener la posición del mouse relativa a la caja
     rects = []
     mouse_x, mouse_y = pygame.mouse.get_pos()
-    mouse_rel_x, mouse_rel_y = mouse_x - x, mouse_y - y
-
+    mouse_rel_x = mouse_x - x
+    mouse_rel_y = mouse_y - y
+    
     for idx, juego in enumerate(juegos[:max_juegos]):
         col = idx % cols
         row = idx // cols
-        cx = offset_x + col * (tam_caja + margen)
-        cy = offset_y + row * (tam_caja + margen)
-        rect = pygame.Rect(cx, cy, tam_caja, tam_caja)
-        abs_rect = pygame.Rect(x + cx, y + cy, tam_caja, tam_caja)
+        cell_x = offset_x + col * (cell_size + margen)
+        cell_y = offset_y + row * (cell_size + margen)
+        cell_rect = pygame.Rect(cell_x, cell_y, cell_size, cell_size)
+        abs_rect = pygame.Rect(x + cell_x, y + cell_y, cell_size, cell_size)
         rects.append(abs_rect)
-
-        is_hover = rect.collidepoint((mouse_rel_x, mouse_rel_y))
-        state = actualizar_hover_state(idx, is_hover)
-
-        if state > 0:
-            scale = 1.0 + 0.2 * state
-            render_size = int(tam_caja * scale)
-            render_cx = cx - (render_size - tam_caja) // 2
-            render_cy = cy - (render_size - tam_caja) // 2
-            radio = 18 if state > 0.9 else 16
-            renderizar_celda(caja, juego, recursos, fuente, render_cx, render_cy, render_size, (200, 220, 255), radio)
+    
+        is_hover = cell_rect.collidepoint((mouse_rel_x, mouse_rel_y))
+        hover_state = actualizar_hover_state(idx, is_hover)
+    
+        if hover_state > 0:
+            scale = 1.0 + 0.2 * hover_state
+            render_size = int(cell_size * scale)
+            render_x = cell_x - (render_size - cell_size) // 2
+            render_y = cell_y - (render_size - cell_size) // 2
+            border_radius = 18 if hover_state > 0.9 else 16
+            renderizar_celda(caja, juego, recursos, fuente, render_x, render_y, render_size, (200, 220, 255), border_radius)
             if is_hover and on_hover:
                 on_hover(idx, abs_rect)
         else:
-            renderizar_celda(caja, juego, recursos, fuente, cx, cy, tam_caja, (230, 240, 255), 16)
-
+            renderizar_celda(caja, juego, recursos, fuente, cell_x, cell_y, cell_size, (230, 240, 255), 16)
+    
     surface.blit(caja, (x, y))
     return rects
