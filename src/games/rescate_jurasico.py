@@ -78,6 +78,9 @@ class JuegoRescate(JuegoBase):
                         self.racha_correctas += 1
                         if self.racha_correctas > self.mejor_racha:
                             self.mejor_racha = self.racha_correctas
+                        # Animaciones de estrellas y partículas
+                        self.crear_efecto_estrellas(btn.rect.center)
+                        self.crear_explosion_particulas(btn.rect.centerx, btn.rect.centery)
                         self.mostrar_feedback(True)
                         if self.posicion_dino > self.total_pasos:
                             self.posicion_dino = 0
