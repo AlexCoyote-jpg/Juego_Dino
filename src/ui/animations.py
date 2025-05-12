@@ -12,7 +12,10 @@ def get_scaled_image(img, size):
         scaled_imgs_cache[key] = pygame.transform.smoothscale(img, (size, size))
     return scaled_imgs_cache[key]
 
-def actualizar_hover_state(idx, is_hover, velocidad=0.1):
+def actualizar_hover_state(idx, is_hover, velocidad=0.15):
+    """
+    Actualiza el estado de hover (0.0 a 1.0) de forma más gradual para una animación más fluida.
+    """
     state = hover_anim_states.get(idx, 0.0)
     state += velocidad if is_hover else -velocidad
     state = max(0.0, min(1.0, state))
