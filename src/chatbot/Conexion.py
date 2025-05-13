@@ -10,6 +10,12 @@ def obtener_respuesta(user_input: str, modelo: str, servicio_key: str) -> str:
     """
     Envía el mensaje del usuario a la API y retorna la respuesta generada.
     """
+    # Validar que el input no esté vacío
+    user_input = user_input.strip()
+    if not user_input:
+        logging.error("Error: Se intentó enviar un mensaje vacío a la API")
+        return "No puedo procesar mensajes vacíos. Por favor, escribe algo."
+    
     prompt = PROMP_INICIAL
     conexion = conexiones["nvidia"]
     logging.info(f"Enviando solicitud a la API con modelo: {modelo}")
