@@ -32,7 +32,7 @@ def get_visual_constants():
     return {
         "ANCHO": current_width,
         "ALTO": current_height,
-        "FUENTE": pygame.font.SysFont("San Francisco", scaler.scale_font_size(22)),
+        "FUENTE": pygame.font.SysFont("Segoe UI Emoji", scaler.scale_font_size(25)),  # Aumentado de 22 a 26
         "COLOR_FONDO": (248, 249, 250),
         "COLOR_TEXTO": (33, 37, 41),
         "COLOR_ENTRADA": (255, 255, 255),
@@ -69,7 +69,7 @@ def get_botones():
             texto="",
             x=ANCHO - sx(210), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
             id="enviar",
-            imagen=render_text_cached("📤", scaler.scale_font_size(36), False, (28, 28, 30)),
+            imagen=render_text_cached("📤", scaler.scale_font_size(40), False, (28, 28, 30)),  # Aumentado de 36 a 40
             imagen_pos="center",
             color_normal=(240, 240, 255),
             color_hover=(200, 220, 255),
@@ -86,7 +86,7 @@ def get_botones():
             texto="",
             x=ANCHO - sx(160), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
             id="voz",
-            imagen=render_text_cached("🔊", scaler.scale_font_size(36), False, (28, 28, 30)),
+            imagen=render_text_cached("🔊", scaler.scale_font_size(40), False, (28, 28, 30)),
             imagen_pos="center",
             color_normal=(240, 255, 240),
             color_hover=(200, 255, 200),
@@ -103,19 +103,10 @@ def get_botones():
             texto="",
             x=ANCHO - sx(110), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
             id="limpiar",
-            imagen=render_text_cached("🧹", scaler.scale_font_size(36), False, (28, 28, 30)),
+            imagen=render_text_cached("🧹", scaler.scale_font_size(40), False, (28, 28, 30)),
             tooltip="Limpiar historial",
             estilo="apple",
             on_click=lambda: historial.clear()
-        ),
-        Boton(
-            texto="",
-            x=ANCHO - sx(60), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
-            id="salir",
-            imagen=render_text_cached("❌", scaler.scale_font_size(36), False, (220, 0, 0)),
-            tooltip="Salir",
-            estilo="apple",
-            on_click=lambda: (pygame.quit(), sys.exit())
         ),
     ]
 
