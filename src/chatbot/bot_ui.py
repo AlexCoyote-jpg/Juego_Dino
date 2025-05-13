@@ -106,51 +106,88 @@ historial = ChatbotStateManager(max_visible=15)
 logging.basicConfig(level=logging.INFO)
 scroll_manager = ScrollManager()
 
+def render_button_icon(emoji, min_size=28):
+    """
+    Renderiza un emoji para usar como botón con un tamaño mínimo garantizado.
+    Esto evita que los botones sean demasiado pequeños en pantallas de baja resolución.
+    
+    Args:
+        emoji: El emoji a renderizar
+        min_size: Tamaño mínimo del emoji en píxeles
+    
+    Returns:
+        Surface: Superficie de pygame con el emoji renderizado
+    """
+    # Usar el mayor entre el tamaño escalado y el tamaño mínimo
+    size = max(min_size, scaler.scale_font_size(40))
+    
+    # Crear una fuente temporal del tamaño adecuado
+    font = pygame.font.SysFont("Segoe UI Emoji", size)
+    
+    # Renderizar el emoji con esta fuente
+    render = font.render(emoji, True, (28, 28, 30))
+    
+    # Si el render es demasiado pequeño, escalarlo al tamaño mínimo
+    if render.get_width() < min_size or render.get_height() < min_size:
+        min_dim = max(render.get_width(), render.get_height(), 1)
+        scale_factor = min_size / min_dim
+        return pygame.transform.smoothscale(
+            render, 
+            (max(1, int(render.get_width() * scale_factor)),
+             max(1, int(render.get_height() * scale_factor)))
+        )
+    
+    return render
+
 def get_botones():
     c = get_visual_constants()
     sx = scaler.scale_x_value
     sy = scaler.scale_y_value
     ANCHO, ALTO = c["ANCHO"], c["ALTO"]
+    
+    # Garantizar tamaño mínimo para los botones
+    button_size = max(35, sx(48))
+    
     return [
         Boton(
             texto="",
-            x=ANCHO - sx(210), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
+            x=ANCHO - sx(210), y=ALTO - sy(55), ancho=button_size, alto=button_size,
             id="enviar",
-            imagen=render_text_cached("📤", scaler.scale_font_size(40), False, (28, 28, 30)),
+            imagen=render_button_icon("📤"),
             imagen_pos="center",
             color_normal=(240, 240, 255),
             color_hover=(200, 220, 255),
             color_top=(180, 210, 255),
             color_bottom=(120, 170, 255),
             border_color=(180, 200, 255, 180),
-            border_width=sx(2),
-            border_radius=sx(30),
+            border_width=max(1, sx(2)),
+            border_radius=max(15, sx(30)),
             estilo="apple",
             tooltip="Enviar mensaje",
             on_click=lambda: procesar_mensaje_async(state, historial, lambda r: respuesta_callback(r, historial, state))
         ),
         Boton(
             texto="",
-            x=ANCHO - sx(160), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
+            x=ANCHO - sx(160), y=ALTO - sy(55), ancho=button_size, alto=button_size,
             id="voz",
-            imagen=render_text_cached("🔊", scaler.scale_font_size(40), False, (28, 28, 30)),
+            imagen=render_button_icon("🔊"),
             imagen_pos="center",
             color_normal=(240, 255, 240),
             color_hover=(200, 255, 200),
             color_top=(180, 255, 210),
             color_bottom=(120, 170, 255),
             border_color=(180, 220, 180, 180),
-            border_width=sx(2),
-            border_radius=sx(18),
+            border_width=max(1, sx(2)),
+            border_radius=max(10, sx(18)),
             estilo="apple",
             tooltip="Reproducir voz",
             on_click=lambda: manejar_voz(historial)
         ),
         Boton(
             texto="",
-            x=ANCHO - sx(110), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
+            x=ANCHO - sx(110), y=ALTO - sy(55), ancho=button_size, alto=button_size,
             id="limpiar",
-            imagen=render_text_cached("🧹", scaler.scale_font_size(40), False, (28, 28, 30)),
+            imagen=render_button_icon("🧹"),
             tooltip="Limpiar historial",
             estilo="apple",
             on_click=lambda: historial.clear()
