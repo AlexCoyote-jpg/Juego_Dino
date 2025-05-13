@@ -5,11 +5,15 @@ from chatbot.Conexion import obtener_respuesta_async
 from chatbot.Configs import LLAMA
 
 def hay_respuesta_bot(historial):
+    # historial puede ser ChatbotStateManager o lista
+    if hasattr(historial, 'all_messages'):
+        return any(msg.startswith("Bot: ") for msg in historial.all_messages)
     return any(msg.startswith("Bot: ") for msg in historial)
 
 def manejar_voz(historial):
     pygame.mixer.Sound("assets/sonidos/acierto.wav").play()
-    for msg in reversed(historial):
+    mensajes = historial.all_messages if hasattr(historial, 'all_messages') else historial
+    for msg in reversed(mensajes):
         if msg.startswith("Bot: "):
             hablar(msg[5:])
             break
@@ -18,12 +22,18 @@ def procesar_mensaje_async(state, historial, callback):
     mensaje = state['entrada_usuario'].strip()
     if mensaje and not state['esperando_respuesta']:
         state['esperando_respuesta'] = True
-        historial.append(f"Tú: 🧑‍💬 {mensaje}")
+        if hasattr(historial, 'add_message'):
+            historial.add_message(f"Tú: 🧑‍💬 {mensaje}")
+        else:
+            historial.append(f"Tú: 🧑‍💬 {mensaje}")
         state['entrada_usuario'] = ""
         obtener_respuesta_async(mensaje, LLAMA.model, LLAMA.api_key, callback=callback)
 
 def respuesta_callback(respuesta, historial, state):
-    historial.append(f"Bot: {respuesta}")
+    if hasattr(historial, 'add_message'):
+        historial.add_message(f"Bot: {respuesta}")
+    else:
+        historial.append(f"Bot: {respuesta}")
     state['esperando_respuesta'] = False
 
 def handle_key_event(event, state, enviar_callback):
@@ -84,3 +94,10 @@ def process_events(events, state, historial, scroll_manager, max_scroll, scroll_
                 botones,
                 state
             )
+        # Scroll con ChatbotStateManager
+        if hasattr(historial, 'scroll_up'):
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    historial.scroll_up()
+                elif event.key == pygame.K_DOWN:
+                    historial.scroll_down()

@@ -17,6 +17,7 @@ from chatbot.event_handlers import (
     process_events
 )
 from core.scale.responsive_scaler_basic import ResponsiveScaler
+from chatbot.chatbot_state import ChatbotStateManager
 
 pygame.init()
 pygame.mixer.init()
@@ -68,7 +69,7 @@ state = {
     'entrada_usuario': "",
     'esperando_respuesta': False
 }
-historial = []
+historial = ChatbotStateManager(max_visible=15)
 
 logging.basicConfig(level=logging.INFO)
 scroll_manager = ScrollManager()
@@ -140,9 +141,11 @@ def renderizar_historial(pantalla):
     avatar_margin = sx(40)
 
     SCROLL_AREA = pygame.Rect(margin_horiz, sy(20), ANCHO - margin_horiz * 2 - SCROLL_WIDTH - SCROLL_MARGIN, int(ALTO * 0.7))
-    mensajes = historial[-100:]
-    y_offset, surfaces = 0, []
+    mensajes = historial.all_messages if hasattr(historial, 'all_messages') else historial
 
+    # --- Calcular altura de cada mensaje (para scroll pixel-perfect) ---
+    alturas = []
+    mensajes_renders = []
     for mensaje in mensajes:
         is_bot = mensaje.startswith("Bot: ")
         display_msg = ("🤖 " + mensaje[5:]) if is_bot else mensaje
@@ -155,34 +158,67 @@ def renderizar_historial(pantalla):
         max_width = max((r.get_width() for r in renders), default=0)
         padding = sx(12)
         msg_width, msg_height = max_width + padding * 2, total_height + padding
+        alturas.append(msg_height + spacing)
+        mensajes_renders.append((mensaje, is_bot, renders, color, text_color, avatar, msg_width, msg_height, padding))
 
+    # Sincronizar alturas con ChatbotStateManager
+    if hasattr(historial, 'set_mensajes_altos'):
+        historial.set_mensajes_altos(alturas)
+
+    # --- Scroll visual: obtener mensajes y offset según scroll_offset_px ---
+    scroll_offset = int(getattr(historial, 'scroll_offset_px', 0))
+    area_height = SCROLL_AREA.height
+    visibles, offset_inicial = [], 0
+    if hasattr(historial, 'get_visible_messages_by_scroll'):
+        visibles, offset_inicial = historial.get_visible_messages_by_scroll(area_height)
+    else:
+        visibles = mensajes_renders
+        offset_inicial = 0
+
+    # --- Renderizar solo los mensajes visibles ---
+    y_offset = offset_inicial
+    surfaces = []
+    for idx, (mensaje, alto) in enumerate(visibles):
+        # Buscar el render correspondiente
+        try:
+            i = mensajes.index(mensaje)
+            _, is_bot, renders, color, text_color, avatar, msg_width, msg_height, padding = mensajes_renders[i]
+        except Exception:
+            continue
         fondo = pygame.Surface((msg_width + MENSAJE_SOMBRA, msg_height + MENSAJE_SOMBRA), pygame.SRCALPHA)
         pygame.draw.rect(fondo, (0, 0, 0, 40), pygame.Rect(MENSAJE_SOMBRA, MENSAJE_SOMBRA, msg_width, msg_height), border_radius=BORDER_RADIUS)
         pygame.draw.rect(fondo, color, pygame.Rect(0, 0, msg_width, msg_height), border_radius=BORDER_RADIUS)
-
-        for i, r in enumerate(renders):
-            fondo.blit(r, (padding, padding // 2 + i * (LINE_HEIGHT + sy(4))))
-
+        for j, r in enumerate(renders):
+            fondo.blit(r, (padding, padding // 2 + j * (LINE_HEIGHT + sy(4))))
         x = avatar_margin if is_bot else SCROLL_AREA.width - fondo.get_width() - avatar_margin
-        surfaces.append((avatar, 0 if is_bot else SCROLL_AREA.width - avatar.get_width(), y_offset + (total_height - avatar.get_height()) // 2, avatar.get_height()))
+        surfaces.append((avatar, 0 if is_bot else SCROLL_AREA.width - avatar.get_width(), y_offset + (msg_height - avatar.get_height()) // 2, avatar.get_height()))
         surfaces.append((fondo, x, y_offset, msg_height))
-        y_offset += msg_height + spacing
+        y_offset += alto
 
-    total_height = y_offset
+    total_height = sum(alturas)
     scroll_surface = pygame.Surface((SCROLL_AREA.width, max(SCROLL_AREA.height, total_height)), pygame.SRCALPHA)
     for surface, x, y, _ in surfaces:
         scroll_surface.blit(surface, (x, y))
 
-    scroll_y = scroll_manager.update(max(0, total_height - SCROLL_AREA.height))
-    pantalla.blit(scroll_surface, (SCROLL_AREA.x, SCROLL_AREA.y), area=pygame.Rect(0, scroll_y, SCROLL_AREA.width, SCROLL_AREA.height))
+    pantalla.blit(scroll_surface, (SCROLL_AREA.x, SCROLL_AREA.y), area=pygame.Rect(0, 0, SCROLL_AREA.width, SCROLL_AREA.height))
 
+    # --- Barra de scroll visual ---
+    scroll_manager = globals().get('scroll_manager', None)
+    if scroll_manager and hasattr(historial, 'get_total_height'):
+        # Sincronizar scroll visual con scroll_offset_px
+        max_scroll = max(0, historial.get_total_height() - area_height)
+        historial.set_scroll_offset_px(scroll_manager.update(max_scroll))
+        scroll_pos = historial.scroll_offset_px
+    else:
+        scroll_pos = 0
+        max_scroll = 0
     dibujar_barra_scroll(
         pantalla,
         ANCHO - SCROLL_WIDTH - SCROLL_MARGIN,
         SCROLL_AREA.y,
         SCROLL_WIDTH,
         SCROLL_AREA.height,
-        scroll_y,
+        scroll_pos,
         total_height,
         SCROLL_AREA.height,
         color=(150, 180, 255),
