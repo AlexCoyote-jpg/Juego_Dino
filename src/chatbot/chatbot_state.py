@@ -82,3 +82,12 @@ class ChatbotStateManager:
             mensajes.append((self.all_messages[i], self._mensajes_altos[i]))
             y_actual += self._mensajes_altos[i]
         return mensajes, offset_inicial
+
+    def replace_last_bot_message(self, new_message):
+        """Reemplaza el último mensaje del bot con uno nuevo"""
+        for i in range(len(self.all_messages) - 1, -1, -1):
+            if self.all_messages[i][0] == "bot":
+                self.all_messages[i] = ("bot", new_message)
+                self.needs_redraw = True
+                return True
+        return False
