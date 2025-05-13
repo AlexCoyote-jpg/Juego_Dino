@@ -7,7 +7,14 @@ from chatbot.Conexion import obtener_respuesta_async
 from chatbot.voz import hablar, detener
 from ui.components.utils import obtener_fuente, render_text_cached, Boton
 from ui.components.scroll import ScrollManager, dibujar_barra_scroll
-import event_handlers
+from event_handlers import (
+    hay_respuesta_bot,
+    manejar_voz,
+    procesar_mensaje_async,
+    respuesta_callback,
+    handle_key_event,
+    handle_mouse_event,
+)
 
 # Inicialización
 pygame.init()
@@ -60,7 +67,7 @@ botones = [
         border_radius=30,
         estilo="apple",
         tooltip="Enviar mensaje",
-        on_click=lambda: procesar_mensaje_async()
+        on_click=lambda: procesar_mensaje_async(state, historial, lambda r: respuesta_callback(r, historial, state))
     ),
     Boton(
         texto="",
@@ -77,7 +84,7 @@ botones = [
         border_radius=18,
         estilo="apple",
         tooltip="Reproducir voz",
-        on_click=lambda: manejar_voz()
+        on_click=lambda: manejar_voz(historial)
     ),
     Boton(
         texto="",
@@ -108,9 +115,6 @@ grey_surface_cache.fill((180, 180, 180, 128))
 
 scroll_manager = ScrollManager()
 SCROLL_AREA = pygame.Rect(20, 20, ANCHO - 40 - SCROLL_WIDTH - SCROLL_MARGIN, 420)  # Ajusta tamaño y posición según tu UI
-
-def hay_respuesta_bot():
-    return any(msg.startswith("Bot: ") for msg in historial)
 
 def renderizar_historial():
     # Renderiza todo el historial en una superficie aparte
@@ -218,26 +222,6 @@ def manejar_click(pos):
             )
             break
 
-def manejar_voz():
-    sonido_voz = pygame.mixer.Sound("assets/sonidos/acierto.wav")
-    sonido_voz.play()
-    for msg in reversed(historial):
-        if msg.startswith("Bot: "):
-            hablar(msg[5:])
-            break
-
-def procesar_mensaje_async():
-    mensaje = state['entrada_usuario'].strip()
-    if mensaje and not state['esperando_respuesta']:
-        state['esperando_respuesta'] = True
-        historial.append("Tú: " + "🧑‍💬 " + mensaje)
-        state['entrada_usuario'] = ""
-        obtener_respuesta_async(mensaje, LLAMA.model, LLAMA.api_key, callback=respuesta_callback)
-
-def respuesta_callback(respuesta):
-    historial.append("Bot: " + respuesta)
-    state['esperando_respuesta'] = False
-
 def dibujar_entrada():
     color_entrada = (230, 230, 235) if state['esperando_respuesta'] else COLOR_ENTRADA
     pygame.draw.rect(pantalla, color_entrada, entrada_rect, border_radius=BORDER_RADIUS)
@@ -247,7 +231,7 @@ def dibujar_entrada():
 
 def dibujar_botones():
     for boton in botones:
-        if boton.id == "voz" and not hay_respuesta_bot():
+        if boton.id == "voz" and not hay_respuesta_bot(historial):
             continue
         if boton.id in ("enviar", "voz") and state['esperando_respuesta']:
             boton.color_normal = (180, 180, 180)
@@ -301,9 +285,9 @@ def main():
                 pygame.quit()
                 sys.exit()
             elif evento.type == pygame.KEYDOWN:
-                event_handlers.handle_key_event(evento, state, procesar_mensaje_async)
+                handle_key_event(evento, state, lambda: procesar_mensaje_async(state, historial, lambda r: respuesta_callback(r, historial, state)))
             elif evento.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
-                event_handlers.handle_mouse_event(evento, scroll_manager, max_scroll, SCROLL_AREA.y, SCROLL_AREA.height, bar_rect, botones, state)
+                handle_mouse_event(evento, scroll_manager, max_scroll, SCROLL_AREA.y, SCROLL_AREA.height, bar_rect, botones, state)
         
         # Separador visual entre área de chat y entrada
         pygame.draw.line(pantalla, (220, 220, 220), 

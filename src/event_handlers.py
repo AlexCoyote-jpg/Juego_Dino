@@ -1,5 +1,30 @@
 import pygame
-from chatbot.voz import detener
+from chatbot.voz import hablar, detener
+from chatbot.Conexion import obtener_respuesta_async
+from chatbot.Configs import LLAMA
+
+def hay_respuesta_bot(historial):
+    return any(msg.startswith("Bot: ") for msg in historial)
+
+def manejar_voz(historial):
+    sonido_voz = pygame.mixer.Sound("assets/sonidos/acierto.wav")
+    sonido_voz.play()
+    for msg in reversed(historial):
+        if msg.startswith("Bot: "):
+            hablar(msg[5:])
+            break
+
+def procesar_mensaje_async(state, historial, callback):
+    mensaje = state['entrada_usuario'].strip()
+    if mensaje and not state['esperando_respuesta']:
+        state['esperando_respuesta'] = True
+        historial.append("Tú: " + "🧑‍💬 " + mensaje)
+        state['entrada_usuario'] = ""
+        obtener_respuesta_async(mensaje, LLAMA.model, LLAMA.api_key, callback=callback)
+
+def respuesta_callback(respuesta, historial, state):
+    historial.append("Bot: " + respuesta)
+    state['esperando_respuesta'] = False
 
 def handle_key_event(event, state, procesar_mensaje_async):
     # Actualiza el 'entrada_usuario' o invoca el envío del mensaje
