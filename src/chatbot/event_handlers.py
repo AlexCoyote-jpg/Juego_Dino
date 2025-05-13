@@ -1,3 +1,4 @@
+import sys
 import pygame
 from chatbot.voz import hablar, detener
 from chatbot.Conexion import obtener_respuesta_async
@@ -26,10 +27,9 @@ def respuesta_callback(respuesta, historial, state):
     historial.append("Bot: " + respuesta)
     state['esperando_respuesta'] = False
 
-def handle_key_event(event, state, procesar_mensaje_async):
-    # Actualiza el 'entrada_usuario' o invoca el envío del mensaje
+def handle_key_event(event, state, callback):
     if event.key == pygame.K_RETURN:
-        procesar_mensaje_async()
+        callback()
     elif event.key == pygame.K_BACKSPACE:
         state['entrada_usuario'] = state['entrada_usuario'][:-1]
     elif event.unicode.isprintable():
@@ -58,3 +58,17 @@ def handle_mouse_event(event, scroll_manager, max_scroll, area_y, area_height, b
         y=area_y,
         bar_rect=bar_rect
     )
+
+def process_events(events, state, historial, scroll_manager, max_scroll, scroll_area, bar_rect, botones):
+    for event in events:
+        if event.type == pygame.QUIT:
+            detener()
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            handle_key_event(
+                event, state,
+                lambda: procesar_mensaje_async(state, historial, lambda r: respuesta_callback(r, historial, state))
+            )
+        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+            handle_mouse_event(event, scroll_manager, max_scroll, scroll_area.y, scroll_area.height, bar_rect, botones, state)
