@@ -23,6 +23,8 @@ pygame.mixer.init()
 
 scaler = ResponsiveScaler(base_width=900, base_height=600)
 
+_avatar_cache = {}
+
 def set_render_area(width, height):
     scaler.update(width, height)
 
@@ -32,7 +34,7 @@ def get_visual_constants():
     return {
         "ANCHO": current_width,
         "ALTO": current_height,
-        "FUENTE": pygame.font.SysFont("Segoe UI Emoji", scaler.scale_font_size(25)),  # Aumentado de 22 a 26
+        "FUENTE": pygame.font.SysFont("Segoe UI Emoji", scaler.scale_font_size(25)),
         "COLOR_FONDO": (248, 249, 250),
         "COLOR_TEXTO": (33, 37, 41),
         "COLOR_ENTRADA": (255, 255, 255),
@@ -48,6 +50,20 @@ def get_visual_constants():
         "SCROLL_MARGIN": scaler.scale_x_value(2),
     }
 
+def get_avatar_surface(label, color):
+    key = (label, color)
+    if key in _avatar_cache:
+        return _avatar_cache[key]
+
+    size = scaler.scale_x_value(32)
+    radius = size // 2
+    surf = pygame.Surface((size, size), pygame.SRCALPHA)
+    pygame.draw.circle(surf, color, (radius, radius), radius)
+    emoji = render_text_cached(label, scaler.scale_font_size(16), False, (255, 255, 255))
+    surf.blit(emoji, emoji.get_rect(center=(radius, radius)))
+    _avatar_cache[key] = surf
+    return surf
+
 state = {
     'entrada_usuario': "",
     'esperando_respuesta': False
@@ -55,21 +71,19 @@ state = {
 historial = []
 
 logging.basicConfig(level=logging.INFO)
-
 scroll_manager = ScrollManager()
 
 def get_botones():
-    constants = get_visual_constants()
-    ANCHO = constants["ANCHO"]
-    ALTO = constants["ALTO"]
+    c = get_visual_constants()
     sx = scaler.scale_x_value
     sy = scaler.scale_y_value
+    ANCHO, ALTO = c["ANCHO"], c["ALTO"]
     return [
         Boton(
             texto="",
             x=ANCHO - sx(210), y=ALTO - sy(55), ancho=sx(48), alto=sy(48),
             id="enviar",
-            imagen=render_text_cached("📤", scaler.scale_font_size(40), False, (28, 28, 30)),  # Aumentado de 36 a 40
+            imagen=render_text_cached("📤", scaler.scale_font_size(40), False, (28, 28, 30)),
             imagen_pos="center",
             color_normal=(240, 240, 255),
             color_hover=(200, 220, 255),
@@ -111,93 +125,56 @@ def get_botones():
     ]
 
 def renderizar_historial(pantalla):
-    constants = get_visual_constants()
-    ANCHO = constants["ANCHO"]
-    ALTO = constants["ALTO"]
-    FUENTE = constants["FUENTE"]
-    COLOR_BOT = constants["COLOR_BOT"]
-    COLOR_BOT_TEXT = constants["COLOR_BOT_TEXT"]
-    COLOR_USER = constants["COLOR_USER"]
-    COLOR_USER_TEXT = constants["COLOR_USER_TEXT"]
-    LINE_HEIGHT = constants["LINE_HEIGHT"]
-    MAX_LINE_WIDTH = constants["MAX_LINE_WIDTH"]
-    BORDER_RADIUS = constants["BORDER_RADIUS"]
-    MENSAJE_SOMBRA = constants["MENSAJE_SOMBRA"]
-    SCROLL_WIDTH = constants["SCROLL_WIDTH"]
-    SCROLL_MARGIN = constants["SCROLL_MARGIN"]
+    c = get_visual_constants()
+    sx, sy = scaler.scale_x_value, scaler.scale_y_value
+    FUENTE = c["FUENTE"]
+    LINE_HEIGHT, MAX_LINE_WIDTH = c["LINE_HEIGHT"], c["MAX_LINE_WIDTH"]
+    BORDER_RADIUS = c["BORDER_RADIUS"]
+    MENSAJE_SOMBRA = c["MENSAJE_SOMBRA"]
+    SCROLL_WIDTH = c["SCROLL_WIDTH"]
+    SCROLL_MARGIN = c["SCROLL_MARGIN"]
+    ANCHO, ALTO = c["ANCHO"], c["ALTO"]
 
-    # Precalcular valores de escalado que se usan repetidamente
-    sx = scaler.scale_x_value
-    sy = scaler.scale_y_value
     margin_horiz = sx(20)
-    avatar_size = sx(32)
-    avatar_radius = sx(16)
+    spacing = sy(10)
     avatar_margin = sx(40)
-    spacing_between_msgs = sy(10)
 
-    SCROLL_AREA = pygame.Rect(
-        margin_horiz, sy(20),
-        ANCHO - margin_horiz * 2 - SCROLL_WIDTH - SCROLL_MARGIN,
-        int(ALTO * 0.7)
-    )
-
+    SCROLL_AREA = pygame.Rect(margin_horiz, sy(20), ANCHO - margin_horiz * 2 - SCROLL_WIDTH - SCROLL_MARGIN, int(ALTO * 0.7))
     mensajes = historial[-100:]
-    ancho = SCROLL_AREA.width
-    y_offset = 0
-    surfaces = []
+    y_offset, surfaces = 0, []
+
     for mensaje in mensajes:
-        if mensaje.startswith("Bot: "):
-            color, text_color = COLOR_BOT, COLOR_BOT_TEXT
-            display_msg = "🤖 " + mensaje[5:]
-            align = "left"
-            avatar = pygame.Surface((avatar_size, avatar_size), pygame.SRCALPHA)
-            pygame.draw.circle(avatar, (120, 120, 220), (avatar_radius, avatar_radius), avatar_radius)
-            avatar_text = render_text_cached("🤖", scaler.scale_font_size(16), False, (255, 255, 255))
-            avatar.blit(avatar_text, avatar_text.get_rect(center=(avatar_radius, avatar_radius)))
-        else:
-            color, text_color = COLOR_USER, COLOR_USER_TEXT
-            display_msg = mensaje
-            align = "right"
-            avatar = pygame.Surface((avatar_size, avatar_size), pygame.SRCALPHA)
-            pygame.draw.circle(avatar, (52, 199, 89), (avatar_radius, avatar_radius), avatar_radius)
-            avatar_text = render_text_cached("👤", scaler.scale_font_size(16), False, (255, 255, 255))
-            avatar.blit(avatar_text, avatar_text.get_rect(center=(avatar_radius, avatar_radius)))
+        is_bot = mensaje.startswith("Bot: ")
+        display_msg = ("🤖 " + mensaje[5:]) if is_bot else mensaje
+        color, text_color = (c["COLOR_BOT"], c["COLOR_BOT_TEXT"]) if is_bot else (c["COLOR_USER"], c["COLOR_USER_TEXT"])
+        avatar = get_avatar_surface("🤖" if is_bot else "👤", (120,120,220) if is_bot else (52,199,89))
 
         lineas = textwrap.wrap(display_msg, MAX_LINE_WIDTH)
         renders = [FUENTE.render(linea, True, text_color) for linea in lineas]
         total_height = len(renders) * (LINE_HEIGHT + sy(4)) - sy(4)
         max_width = max((r.get_width() for r in renders), default=0)
-
         padding = sx(12)
-        msg_width = max_width + padding * 2
-        msg_height = total_height + padding
+        msg_width, msg_height = max_width + padding * 2, total_height + padding
+
         fondo = pygame.Surface((msg_width + MENSAJE_SOMBRA, msg_height + MENSAJE_SOMBRA), pygame.SRCALPHA)
+        pygame.draw.rect(fondo, (0, 0, 0, 40), pygame.Rect(MENSAJE_SOMBRA, MENSAJE_SOMBRA, msg_width, msg_height), border_radius=BORDER_RADIUS)
+        pygame.draw.rect(fondo, color, pygame.Rect(0, 0, msg_width, msg_height), border_radius=BORDER_RADIUS)
 
-        shadow_rect = pygame.Rect(MENSAJE_SOMBRA, MENSAJE_SOMBRA, msg_width, msg_height)
-        pygame.draw.rect(fondo, (0, 0, 0, 40), shadow_rect, border_radius=BORDER_RADIUS)
-        msg_rect = pygame.Rect(0, 0, msg_width, msg_height)
-        pygame.draw.rect(fondo, color, msg_rect, border_radius=BORDER_RADIUS)
+        for i, r in enumerate(renders):
+            fondo.blit(r, (padding, padding // 2 + i * (LINE_HEIGHT + sy(4))))
 
-        y_line = 0
-        for r in renders:
-            fondo.blit(r, (padding, y_line + padding // 2))
-            y_line += LINE_HEIGHT + sy(4)
-
-        x = avatar_margin if align == "left" else ancho - fondo.get_width() - avatar_margin
-
-        surfaces.append((avatar, 0 if align == "left" else ancho - avatar_size, y_offset + (total_height - avatar_size) // 2, avatar_size))
-        surfaces.append((fondo, x, y_offset, total_height + padding))
-        y_offset += total_height + padding + spacing_between_msgs
+        x = avatar_margin if is_bot else SCROLL_AREA.width - fondo.get_width() - avatar_margin
+        surfaces.append((avatar, 0 if is_bot else SCROLL_AREA.width - avatar.get_width(), y_offset + (total_height - avatar.get_height()) // 2, avatar.get_height()))
+        surfaces.append((fondo, x, y_offset, msg_height))
+        y_offset += msg_height + spacing
 
     total_height = y_offset
-    scroll_surface = pygame.Surface((ancho, max(SCROLL_AREA.height, total_height)), pygame.SRCALPHA)
+    scroll_surface = pygame.Surface((SCROLL_AREA.width, max(SCROLL_AREA.height, total_height)), pygame.SRCALPHA)
     for surface, x, y, _ in surfaces:
         scroll_surface.blit(surface, (x, y))
 
-    max_scroll = max(0, total_height - SCROLL_AREA.height)
-    scroll_y = scroll_manager.update(max_scroll)
-
-    pantalla.blit(scroll_surface, (SCROLL_AREA.x, SCROLL_AREA.y), area=pygame.Rect(0, scroll_y, ancho, SCROLL_AREA.height))
+    scroll_y = scroll_manager.update(max(0, total_height - SCROLL_AREA.height))
+    pantalla.blit(scroll_surface, (SCROLL_AREA.x, SCROLL_AREA.y), area=pygame.Rect(0, scroll_y, SCROLL_AREA.width, SCROLL_AREA.height))
 
     dibujar_barra_scroll(
         pantalla,
@@ -215,23 +192,15 @@ def renderizar_historial(pantalla):
     return surfaces, total_height
 
 def dibujar_entrada(pantalla):
-    constants = get_visual_constants()
-    FUENTE = constants["FUENTE"]
-    COLOR_TEXTO = constants["COLOR_TEXTO"]
-    COLOR_ENTRADA = constants["COLOR_ENTRADA"]
-    BORDER_RADIUS = constants["BORDER_RADIUS"]
-    ALTO = constants["ALTO"]
-    sx = scaler.scale_x_value
-    sy = scaler.scale_y_value
-    x, y = sx(20), ALTO - sy(55)
-    width, height = sx(700), sy(48)
-    entrada_rect = pygame.Rect(x, y, width, height)
-    border_color = (200, 200, 205)
-    color_entrada = (230, 230, 235) if state['esperando_respuesta'] else COLOR_ENTRADA
-    pygame.draw.rect(pantalla, color_entrada, entrada_rect, border_radius=BORDER_RADIUS)
-    pygame.draw.rect(pantalla, border_color, entrada_rect, 1, border_radius=BORDER_RADIUS)
-    pantalla.blit(FUENTE.render(state['entrada_usuario'], True, COLOR_TEXTO),
-                  (entrada_rect.x + sx(12), entrada_rect.y + sy(12)))
+    c = get_visual_constants()
+    sx, sy = scaler.scale_x_value, scaler.scale_y_value
+    x, y = sx(20), c["ALTO"] - sy(55)
+    w, h = sx(700), sy(48)
+    rect = pygame.Rect(x, y, w, h)
+    color_fill = (230, 230, 235) if state['esperando_respuesta'] else c["COLOR_ENTRADA"]
+    pygame.draw.rect(pantalla, color_fill, rect, border_radius=c["BORDER_RADIUS"])
+    pygame.draw.rect(pantalla, (200, 200, 205), rect, 1, border_radius=c["BORDER_RADIUS"])
+    pantalla.blit(c["FUENTE"].render(state['entrada_usuario'], True, c["COLOR_TEXTO"]), (rect.x + sx(12), rect.y + sy(12)))
 
 def dibujar_botones(pantalla):
     botones = get_botones()
