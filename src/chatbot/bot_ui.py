@@ -7,6 +7,7 @@ from chatbot.Conexion import obtener_respuesta_async
 from chatbot.voz import hablar, detener
 from ui.components.utils import obtener_fuente, render_text_cached, Boton
 from ui.components.scroll import ScrollManager, dibujar_barra_scroll
+from ui.components.emoji import mostrar_alternativo_adaptativo
 from chatbot.event_handlers import (
     hay_respuesta_bot,
     manejar_voz,
@@ -179,20 +180,34 @@ def renderizar_historial(pantalla):
     y_offset = offset_inicial
     surfaces = []
     for idx, (mensaje, alto) in enumerate(visibles):
-        # Buscar el render correspondiente
         try:
             i = mensajes.index(mensaje)
             _, is_bot, renders, color, text_color, avatar, msg_width, msg_height, padding = mensajes_renders[i]
         except Exception:
             continue
-        fondo = pygame.Surface((msg_width + MENSAJE_SOMBRA, msg_height + MENSAJE_SOMBRA), pygame.SRCALPHA)
-        pygame.draw.rect(fondo, (0, 0, 0, 40), pygame.Rect(MENSAJE_SOMBRA, MENSAJE_SOMBRA, msg_width, msg_height), border_radius=BORDER_RADIUS)
-        pygame.draw.rect(fondo, color, pygame.Rect(0, 0, msg_width, msg_height), border_radius=BORDER_RADIUS)
-        for j, r in enumerate(renders):
-            fondo.blit(r, (padding, padding // 2 + j * (LINE_HEIGHT + sy(4))))
-        x = avatar_margin if is_bot else SCROLL_AREA.width - fondo.get_width() - avatar_margin
+        # Renderiza el avatar
+        x = avatar_margin if is_bot else SCROLL_AREA.width - avatar.get_width()
         surfaces.append((avatar, 0 if is_bot else SCROLL_AREA.width - avatar.get_width(), y_offset + (msg_height - avatar.get_height()) // 2, avatar.get_height()))
-        surfaces.append((fondo, x, y_offset, msg_height))
+        # Renderiza el mensaje con emojis y símbolos
+        # Ajusta el tamaño mínimo y máximo de fuente usando el escalador ResponsiveScaler
+        font_size_min = max(14, scaler.scale_font_size(18))
+        font_size_max = max(20, scaler.scale_font_size(32))
+        msg_surface = pygame.Surface((msg_width + MENSAJE_SOMBRA, msg_height + MENSAJE_SOMBRA), pygame.SRCALPHA)
+        pygame.draw.rect(msg_surface, (0, 0, 0, 40), pygame.Rect(MENSAJE_SOMBRA, MENSAJE_SOMBRA, msg_width, msg_height), border_radius=BORDER_RADIUS)
+        pygame.draw.rect(msg_surface, color, pygame.Rect(0, 0, msg_width, msg_height), border_radius=BORDER_RADIUS)
+        mostrar_alternativo_adaptativo(
+            msg_surface,
+            ("🤖 " + mensaje[5:]) if is_bot else mensaje,
+            padding,
+            padding // 2,
+            msg_width,
+            msg_height,
+            color=text_color,
+            centrado=False,
+            fuente_base=pygame.font.SysFont("Segoe UI Emoji", font_size_max)
+        )
+        x_msg = avatar_margin if is_bot else SCROLL_AREA.width - msg_surface.get_width() - avatar_margin
+        surfaces.append((msg_surface, x_msg, y_offset, msg_height))
         y_offset += alto
 
     total_height = sum(alturas)
