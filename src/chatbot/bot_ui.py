@@ -28,7 +28,20 @@ scaler = ResponsiveScaler(base_width=900, base_height=600)
 _avatar_cache = {}
 
 def set_render_area(width, height):
+    """
+    Actualiza el escalador con las nuevas dimensiones y limpia cachés si es necesario.
+    """
+    old_width, old_height = scaler.current_width, scaler.current_height
     scaler.update(width, height)
+    
+    # Si el tamaño cambió significativamente, limpiar cachés
+    if (abs(old_width - width) > 50 or abs(old_height - height) > 50):
+        global _avatar_cache
+        _avatar_cache = {}  # Limpiar caché de avatares
+        
+        # También limpiar caché de renderizado de texto si existe en este contexto
+        if 'render_text_cached' in globals() and hasattr(globals()['render_text_cached'], 'cache'):
+            globals()['render_text_cached'].cache.clear()
 
 def get_visual_constants():
     current_width = scaler.current_width
@@ -50,18 +63,36 @@ def get_visual_constants():
         "MENSAJE_SOMBRA": scaler.scale_x_value(3),
         "SCROLL_WIDTH": scaler.scale_x_value(8),
         "SCROLL_MARGIN": scaler.scale_x_value(2),
+        "RESPUESTA_ANIMACION_VELOCIDAD": 4,  # Controla velocidad de animación de espera
+        "AVATAR_SIZE": scaler.scale_x_value(32),  # Tamaño de avatar consistente
     }
 
 def get_avatar_surface(label, color):
-    key = (label, color)
+    """
+    Obtiene o genera la superficie del avatar, con soporte para redimensionamiento.
+    Utiliza un sistema de caché optimizado que tiene en cuenta el tamaño actual.
+    """
+    size = get_visual_constants()["AVATAR_SIZE"]
+    key = (label, color, size)  # La clave ahora incluye el tamaño
+    
     if key in _avatar_cache:
         return _avatar_cache[key]
 
-    size = scaler.scale_x_value(32)
+    # Limitar el tamaño del caché para evitar uso excesivo de memoria
+    if len(_avatar_cache) > 20:
+        # Eliminar entradas antiguas si el caché es demasiado grande
+        old_keys = list(_avatar_cache.keys())[:5]
+        for old_key in old_keys:
+            del _avatar_cache[old_key]
+    
+    # Crear nueva superficie de avatar con el tamaño actual
     radius = size // 2
     surf = pygame.Surface((size, size), pygame.SRCALPHA)
     pygame.draw.circle(surf, color, (radius, radius), radius)
-    emoji = render_text_cached(label, scaler.scale_font_size(16), False, (255, 255, 255))
+    
+    # Escalar el emoji al tamaño apropiado (proporcional al avatar)
+    emoji_size = max(12, int(size * 0.6))
+    emoji = render_text_cached(label, emoji_size, False, (255, 255, 255))
     surf.blit(emoji, emoji.get_rect(center=(radius, radius)))
     _avatar_cache[key] = surf
     return surf
