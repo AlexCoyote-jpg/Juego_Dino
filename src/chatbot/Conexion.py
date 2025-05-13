@@ -1,5 +1,6 @@
 from openai import OpenAI
 import logging
+import threading
 from .Configs import conexiones, PROMP_INICIAL
 
 logging.basicConfig(level=logging.INFO)
@@ -40,5 +41,16 @@ def obtener_respuesta(user_input: str, modelo: str, servicio_key: str) -> str:
     except Exception as e:
         logging.error(f"Error al procesar la respuesta de la API: {e}")
         return "Ocurrió un error al procesar la respuesta de la API."
+
+
+def obtener_respuesta_async(user_input: str, modelo: str, servicio_key: str, callback):
+    """
+    Ejecuta obtener_respuesta en un hilo aparte y llama a callback con la respuesta.
+    """
+    def run():
+        respuesta = obtener_respuesta(user_input, modelo, servicio_key)
+        callback(respuesta)
+    hilo = threading.Thread(target=run)
+    hilo.start()
 
 
