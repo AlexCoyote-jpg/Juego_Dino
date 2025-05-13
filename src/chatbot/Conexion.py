@@ -1,6 +1,6 @@
 from openai import OpenAI
 import logging
-from Configs import conexiones, prompt_inicial
+from .Configs import conexiones, PROMP_INICIAL
 
 logging.basicConfig(level=logging.INFO)
 
@@ -9,7 +9,7 @@ def obtener_respuesta(user_input: str, modelo: str, servicio_key: str) -> str:
     """
     Envía el mensaje del usuario a la API y retorna la respuesta generada.
     """
-    prompt = prompt_inicial
+    prompt = PROMP_INICIAL
     conexion = conexiones["nvidia"]
     logging.info(f"Enviando solicitud a la API con modelo: {modelo}")
     try:
