@@ -13,7 +13,6 @@ class ChatBotScreen:
         # Precrea el fondo de puntos para no redibujarlo en cada frame
         self._background = None
         self._bg_area_size = None
-        self._last_render_size = None  # Almacena el último tamaño para detectar cambios
 
     def _get_scroll_area(self, constants):
         return pygame.Rect(
@@ -24,39 +23,22 @@ class ChatBotScreen:
         )
 
     def handle_events(self, events):
-        # Detectar cambios de tamaño y actualizar solo cuando sea necesario
-        if self._last_render_size != (self.area.width, self.area.height):
-            self._last_render_size = (self.area.width, self.area.height)
-            set_render_area(self.area.width, self.area.height)
-            self._background = None  # Forzar regeneración del fondo
-        
+        set_render_area(self.area.width, self.area.height)
         constants = get_visual_constants()
         SCROLL_AREA = self._get_scroll_area(constants)
-        
-        # Optimización: filtrar eventos solo una vez
         filtered_events = []
         for event in events:
             if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP):
                 if self.area.collidepoint(event.pos):
                     local_pos = (event.pos[0] - self.area.x, event.pos[1] - self.area.y)
-                    # Crear una copia del evento con posición local
-                    filtered_event = pygame.event.Event(event.type, {**event.__dict__, 'pos': local_pos})
-                    filtered_events.append(filtered_event)
-                # No añadir eventos de mouse que estén fuera del área
+                    event.pos = local_pos
+                    filtered_events.append(event)
             else:
                 filtered_events.append(event)
-                
-        # Optimización: calcular altura total solo cuando sea necesario
-        if any(event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEWHEEL) 
-               for event in filtered_events):
-            dummy_surface = pygame.Surface((constants["ANCHO"], constants["ALTO"]))
-            _, total_height = renderizar_historial(dummy_surface)
-            max_scroll = max(0, total_height - SCROLL_AREA.height)
-        else:
-            # Usar un valor predeterminado para eventos que no son de scroll
-            max_scroll = getattr(historial, 'get_total_height', lambda: 0)() - SCROLL_AREA.height
-            max_scroll = max(0, max_scroll)
-            
+        # Para obtener el alto total del historial se utiliza una superficie dummy
+        dummy_surface = pygame.Surface((constants["ANCHO"], constants["ALTO"]))
+        _, total_height = renderizar_historial(dummy_surface)
+        max_scroll = max(0, total_height - SCROLL_AREA.height)
         process_events(
             filtered_events, state, historial, scroll_manager,
             max_scroll=max_scroll,
@@ -71,29 +53,20 @@ class ChatBotScreen:
         )
 
     def update(self, dt):
-        """Actualiza las animaciones con velocidad adaptativa al framerate"""
-        animation_speed = get_visual_constants().get("RESPUESTA_ANIMACION_VELOCIDAD", 4)
         if state['esperando_respuesta']:
-            self.fade_alpha = min(self.fade_alpha + animation_speed, 30)
+            self.fade_alpha = min(self.fade_alpha + 5, 30)
         else:
-            self.fade_alpha = max(self.fade_alpha - animation_speed * 3, 0)
+            self.fade_alpha = max(self.fade_alpha - 15, 0)
 
     def _draw_background(self, sub_surface, constants):
-        """Dibuja el fondo con patrón de puntos, optimizado con caché"""
-        current_size = (self.area.width, self.area.height)
-        
-        # Regenerar fondo solo cuando cambie el tamaño
-        if self._background is None or self._bg_area_size != current_size:
-            self._background = pygame.Surface(current_size)
+        # Crea o reutiliza una superficie de fondo con puntos si el tamaño no varía
+        if self._background is None or self._bg_area_size != (self.area.width, self.area.height):
+            self._background = pygame.Surface((self.area.width, self.area.height))
             self._background.fill(constants["COLOR_FONDO"])
-            
-            # Optimización: calcular espaciado dinámico basado en tamaño
-            dot_spacing = max(10, min(20, int(self.area.width / 45)))
-            for y in range(0, self.area.height, dot_spacing):
-                for x in range(0, self.area.width, dot_spacing):
+            for y in range(0, self.area.height, 20):
+                for x in range(0, self.area.width, 20):
                     pygame.draw.circle(self._background, (240, 240, 240), (x, y), 1)
-            self._bg_area_size = current_size
-            
+            self._bg_area_size = (self.area.width, self.area.height)
         sub_surface.blit(self._background, (0, 0))
 
     def draw(self, pantalla):
