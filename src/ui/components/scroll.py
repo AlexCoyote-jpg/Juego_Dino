@@ -3,44 +3,55 @@ import time
 import unicodedata
 from functools import lru_cache
 from typing import Optional, Tuple, Dict, Any, List, Union, Callable
-def dibujar_barra_scroll(
-    superficie, x, y, ancho, alto, scroll_pos, contenido_alto, ventana_alto, color=(100, 100, 100), highlight=False
-):
+
+def dibujar_barra_scroll(superficie, x, y, ancho, alto, scroll_pos, contenido_alto, ventana_alto, 
+                         color=(100, 100, 100), highlight=False, modern=False):
     """Dibuja una barra de desplazamiento moderna con efecto hover"""
     # Calcular dimensiones y posición de la barra
     if contenido_alto <= ventana_alto:
         return  # No hace falta barra de scroll
     
-    barra_alto = max(20, ventana_alto * ventana_alto / contenido_alto)
+    barra_alto = max(30, ventana_alto * ventana_alto / contenido_alto)
     barra_pos = y + (scroll_pos * (alto - barra_alto) / (contenido_alto - ventana_alto))
     
-    # Dibujar fondo de la barra (más sutil)
-    bg_rect = pygame.Rect(x + ancho - 12, y, 8, alto)
-    pygame.draw.rect(superficie, (220, 220, 220), bg_rect, border_radius=4)
-    
-    # Dibujar la barra con gradiente y borde
-    barra_rect = pygame.Rect(x + ancho - 12, barra_pos, 8, barra_alto)
-    
-    # Crear gradiente
-    if highlight:
-        color_top = (min(255, color[0]+20), min(255, color[1]+20), min(255, color[2]+20))
-        color_bottom = (max(0, color[0]-20), max(0, color[1]-20), max(0, color[2]-20))
+    # Estilo moderno con barra minimalista
+    if modern:
+        # Dibujar fondo de la barra (casi invisible)
+        bg_rect = pygame.Rect(x, y, ancho, alto)
+        pygame.draw.rect(superficie, (220, 220, 220, 30), bg_rect, border_radius=ancho//2)
+        
+        # Dibujar la barra con borde suave y redondeado
+        barra_rect = pygame.Rect(x, barra_pos, ancho, barra_alto)
+        
+        # Crear gradiente suave
+        if highlight:
+            color_top = (min(255, color[0]+15), min(255, color[1]+15), min(255, color[2]+15))
+            color_bottom = (max(0, color[0]-15), max(0, color[1]-15), max(0, color[2]-15))
+        else:
+            color_top = color
+            color_bottom = (max(0, color[0]-20), max(0, color[1]-20), max(0, color[2]-20))
+        
+        # Dibuja el gradiente manualmente asegurando colores válidos
+        for i in range(int(barra_alto)):
+            progress = i / barra_alto if barra_alto > 0 else 0
+            r = int(max(0, min(255, color_top[0] * (1 - progress) + color_bottom[0] * progress)))
+            g = int(max(0, min(255, color_top[1] * (1 - progress) + color_bottom[1] * progress)))
+            b = int(max(0, min(255, color_top[2] * (1 - progress) + color_bottom[2] * progress)))
+            pygame.draw.line(superficie, (r, g, b, 200), 
+                            (barra_rect.x, barra_rect.y + i),
+                            (barra_rect.right, barra_rect.y + i))
+        
+        # Añadir brillo en los bordes para efecto 3D sutil
+        pygame.draw.rect(superficie, (255, 255, 255, 100), barra_rect, width=1, border_radius=ancho//2)
+        
     else:
-        color_top = color
-        color_bottom = (max(0, color[0]-30), max(0, color[1]-30), max(0, color[2]-30))
-    
-    # Dibuja el gradiente manualmente asegurando que los colores sean válidos
-    for i in range(int(barra_alto)):
-        progress = i / barra_alto if barra_alto > 0 else 0
-        r = int(max(0, min(255, color_top[0] * (1 - progress) + color_bottom[0] * progress)))
-        g = int(max(0, min(255, color_top[1] * (1 - progress) + color_bottom[1] * progress)))
-        b = int(max(0, min(255, color_top[2] * (1 - progress) + color_bottom[2] * progress)))
-        pygame.draw.line(superficie, (r, g, b), 
-                        (barra_rect.x, barra_rect.y + i),
-                        (barra_rect.right, barra_rect.y + i))
-    
-    # Añadir borde redondeado (sin alpha, que puede causar problemas)
-    pygame.draw.rect(superficie, (255, 255, 255), barra_rect, width=1, border_radius=4)
+        # Estilo tradicional
+        bg_rect = pygame.Rect(x, y, ancho, alto)
+        pygame.draw.rect(superficie, (220, 220, 220), bg_rect, border_radius=ancho//2)
+        
+        barra_rect = pygame.Rect(x, barra_pos, ancho, barra_alto)
+        pygame.draw.rect(superficie, color, barra_rect, border_radius=ancho//2)
+        pygame.draw.rect(superficie, (255, 255, 255), barra_rect, width=1, border_radius=ancho//2)
 
 # --- Inertial & Time-based Scroll Manager ---
 class ScrollManager:

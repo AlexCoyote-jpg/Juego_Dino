@@ -27,6 +27,8 @@ LINE_HEIGHT = 32
 MAX_LINE_WIDTH = 60
 BORDER_RADIUS = 18  # Bordes más redondeados
 MENSAJE_SOMBRA = 3  # Añadir efecto de sombra a los mensajes
+SCROLL_WIDTH = 8    # Ancho de la barra de scroll
+SCROLL_MARGIN = 2   # Margen entre el borde y la barra de scroll
 
 # Inicializar ventana
 pantalla = pygame.display.set_mode((ANCHO, ALTO))
@@ -105,7 +107,7 @@ grey_surface_cache = pygame.Surface((48, 48), pygame.SRCALPHA)
 grey_surface_cache.fill((180, 180, 180, 128))
 
 scroll_manager = ScrollManager()
-SCROLL_AREA = pygame.Rect(20, 20, 700, 420)  # Ajusta tamaño y posición según tu UI
+SCROLL_AREA = pygame.Rect(20, 20, ANCHO - 40 - SCROLL_WIDTH - SCROLL_MARGIN, 420)  # Ajusta tamaño y posición según tu UI
 
 def hay_respuesta_bot():
     return any(msg.startswith("Bot: ") for msg in historial)
@@ -189,10 +191,19 @@ def renderizar_historial():
     # Dibuja la parte visible
     pantalla.blit(scroll_surface, (SCROLL_AREA.x, SCROLL_AREA.y), area=pygame.Rect(0, scroll_y, ancho, SCROLL_AREA.height))
 
-    # Dibuja la barra de scroll
+    # Dibuja la barra de scroll pegada al borde derecho
     dibujar_barra_scroll(
-        pantalla, SCROLL_AREA.x, SCROLL_AREA.y, SCROLL_AREA.width, SCROLL_AREA.height,
-        scroll_y, total_height, SCROLL_AREA.height, color=(150, 180, 255), highlight=True
+        pantalla, 
+        ANCHO - SCROLL_WIDTH - SCROLL_MARGIN,  # X posicionado al extremo derecho 
+        SCROLL_AREA.y,                         # Mismo Y que el área de scroll
+        SCROLL_WIDTH,                          # Ancho definido por constante
+        SCROLL_AREA.height,                    # Misma altura que el área de scroll
+        scroll_y, 
+        total_height, 
+        SCROLL_AREA.height, 
+        color=(150, 180, 255), 
+        highlight=True,
+        modern=True                            # Estilo moderno
     )
     return surfaces, total_height
 
@@ -262,7 +273,12 @@ def main():
         
         surfaces, total_height = renderizar_historial()
         max_scroll = max(0, total_height - SCROLL_AREA.height)
-        bar_rect = pygame.Rect(SCROLL_AREA.right - 16, SCROLL_AREA.y, 16, SCROLL_AREA.height)
+        bar_rect = pygame.Rect(
+            ANCHO - SCROLL_WIDTH - SCROLL_MARGIN,  # X en el borde derecho
+            SCROLL_AREA.y, 
+            SCROLL_WIDTH, 
+            SCROLL_AREA.height
+        )
         
         # Efecto de transición cuando se envía un mensaje
         if state['esperando_respuesta']:
