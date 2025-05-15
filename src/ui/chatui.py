@@ -43,10 +43,7 @@ class BotScreen:
     def enviar_mensaje(self):
         mensaje = self.texto_usuario.strip()
         if mensaje:
-            self.chatbot.historial.append(("usuario", mensaje))
             respuesta = self.chatbot.procesar_input(mensaje)
-            if respuesta and isinstance(respuesta, str):
-                self.chatbot.historial.append(("bot", respuesta))
             self.texto_usuario = ""
 
     def handle_event(self, event):
@@ -56,33 +53,25 @@ class BotScreen:
             elif event.key == pygame.K_BACKSPACE:
                 self.texto_usuario = self.texto_usuario[:-1]
             else:
-                self.texto_usuario += event.unicode
+                if event.unicode and event.unicode.isprintable():
+                    self.texto_usuario += event.unicode
         elif event.type == pygame.MOUSEBUTTONDOWN:
             self.boton_enviar.handle_event(event)
 
-    def update(self, dt): pass  # Sin lógica dinámica por ahora
+    def update(self, dt): pass
 
     def draw(self, pantalla):
-       
-
-        # Título superior
         mostrar_texto_adaptativo(
             pantalla, "🦖 DinoBot", self.menu.sx(100), self.menu.sy(40),
             pantalla.get_width() - self.menu.sx(200), self.menu.sy(60),
-            pygame.font.SysFont("Segoe UI", 42, bold=True),
+            self.font,
             (70, 130, 180), centrado=True)
-
-        # Área de chat
         self._render_chat(pantalla)
-
-        # Input box
         pygame.draw.rect(pantalla, self.color_input, self.input_rect, 2)
         texto = self.texto_usuario or "Escribe tu mensaje..."
         color = (0, 0, 0) if self.texto_usuario else (180, 180, 180)
         superficie = self.font.render(texto, True, color)
         pantalla.blit(superficie, (self.input_rect.x + 10, self.input_rect.y + 10))
-
-        # Botón enviar
         if self.texto_usuario.strip():
             self.boton_enviar.draw(pantalla)
         else:
@@ -98,18 +87,17 @@ class BotScreen:
         chat_h = self.menu.sy(380)
         dibujar_caja_texto(pantalla, chat_x, chat_y, chat_w, chat_h,
                            (245, 245, 255, 220), radius=18)
-
         line_height = self.menu.sy(45)
         max_lines = (chat_h - 20) // line_height
         ancho_texto = chat_w - 20
         y = chat_y + 10
         mensajes = []
-
-        for autor, texto in self.chatbot.obtener_historial()[-20:]:
+        for autor, texto in self.chatbot.obtener_historial()[-40:]:
+            if not isinstance(texto, str):
+                continue
             color = (70, 130, 180) if autor == "bot" else (0, 0, 0)
             for linea in wrap_text(texto, self.font, ancho_texto):
                 mensajes.append((linea, color))
-
         for linea, color in mensajes[-max_lines:]:
             mostrar_texto_adaptativo(
                 pantalla, linea, chat_x + 10, y,

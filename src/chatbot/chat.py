@@ -7,13 +7,13 @@ class ChatBot:
     def __init__(self):
         self.historial: List[Tuple[str, str]] = []
 
-    def procesar_input(self, texto_usuario: str) -> bool:
+    def procesar_input(self, texto_usuario: str) -> str:
         texto_usuario = texto_usuario.strip()
         if not texto_usuario:
             logging.warning("Se intentó enviar un mensaje vacío a la API. Operación cancelada.")
             mensaje_bot = "Por favor, escribe algo antes de enviar tu mensaje."
             self.historial.append(("bot", mensaje_bot))
-            return False
+            return mensaje_bot
 
         self.historial.append(("usuario", texto_usuario))
 
@@ -24,7 +24,7 @@ class ChatBot:
         )
         self.historial.append(("bot", respuesta))
         logging.info("Respuesta recibida del modelo IA: %s", respuesta)
-        return True
+        return respuesta
 
     def obtener_historial(self) -> List[Tuple[str, str]]:
         return self.historial
