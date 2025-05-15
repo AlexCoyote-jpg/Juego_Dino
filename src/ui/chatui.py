@@ -1,4 +1,5 @@
 import pygame
+import threading
 from ui.components.utils import dibujar_caja_texto, mostrar_texto_adaptativo, Boton
 from chatbot.chat import ChatBot
 
@@ -40,13 +41,33 @@ class BotScreen:
             on_click=self.enviar_mensaje
         )
 
+        self.esperando_respuesta = False
+        self.lock = threading.Lock()
+
     def enviar_mensaje(self):
         mensaje = self.texto_usuario.strip()
-        if mensaje:
-            respuesta = self.chatbot.procesar_input(mensaje)
+        if mensaje and not self.esperando_respuesta:
+            self.esperando_respuesta = True
             self.texto_usuario = ""
+            # Agrega mensaje temporal del bot
+            with self.lock:
+                self.chatbot.historial.append(("usuario", mensaje))
+                self.chatbot.historial.append(("bot", "..."))
+            threading.Thread(target=self._procesar_en_hilo, args=(mensaje,), daemon=True).start()
+
+    def _procesar_en_hilo(self, mensaje):
+        respuesta = self.chatbot.procesar_input(mensaje)
+        with self.lock:
+            # Reemplaza el "..." por la respuesta real
+            for i in range(len(self.chatbot.historial)-1, -1, -1):
+                if self.chatbot.historial[i] == ("bot", "..."):
+                    self.chatbot.historial[i] = ("bot", respuesta)
+                    break
+        self.esperando_respuesta = False
 
     def handle_event(self, event):
+        if self.esperando_respuesta:
+            return  # No permitir escribir mientras espera respuesta
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 self.enviar_mensaje()
