@@ -63,7 +63,7 @@ class BotScreen:
     def update(self, dt): pass  # Sin lógica dinámica por ahora
 
     def draw(self, pantalla):
-        pantalla.fill((255, 255, 255))
+       
 
         # Título superior
         mostrar_texto_adaptativo(
