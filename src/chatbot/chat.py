@@ -23,7 +23,7 @@ class ChatBot:
             servicio_key=LLAMA.api_key,
         )
         self.historial.append(("bot", respuesta))
-        logging.info("Respuesta recibida del modelo IA: %s", respuesta)
+        #logging.info("Respuesta recibida del modelo IA: %s", respuesta)
         return respuesta
 
     def obtener_historial(self) -> List[Tuple[str, str]]:

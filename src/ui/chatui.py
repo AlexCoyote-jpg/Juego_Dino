@@ -43,13 +43,14 @@ class BotScreen:
 
         self.esperando_respuesta = False
         self.lock = threading.Lock()
+        self.cursor_visible = True
+        self.cursor_timer = 0
 
     def enviar_mensaje(self):
         mensaje = self.texto_usuario.strip()
         if mensaje and not self.esperando_respuesta:
             self.esperando_respuesta = True
             self.texto_usuario = ""
-            # Agrega mensaje temporal del bot
             with self.lock:
                 self.chatbot.historial.append(("usuario", mensaje))
                 self.chatbot.historial.append(("bot", "..."))
@@ -58,7 +59,6 @@ class BotScreen:
     def _procesar_en_hilo(self, mensaje):
         respuesta = self.chatbot.procesar_input(mensaje)
         with self.lock:
-            # Reemplaza el "..." por la respuesta real
             for i in range(len(self.chatbot.historial)-1, -1, -1):
                 if self.chatbot.historial[i] == ("bot", "..."):
                     self.chatbot.historial[i] = ("bot", respuesta)
@@ -66,20 +66,24 @@ class BotScreen:
         self.esperando_respuesta = False
 
     def handle_event(self, event):
-        if self.esperando_respuesta:
-            return  # No permitir escribir mientras espera respuesta
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
-                self.enviar_mensaje()
+                if not self.esperando_respuesta:
+                    self.enviar_mensaje()
             elif event.key == pygame.K_BACKSPACE:
                 self.texto_usuario = self.texto_usuario[:-1]
             else:
                 if event.unicode and event.unicode.isprintable():
                     self.texto_usuario += event.unicode
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            self.boton_enviar.handle_event(event)
+            if not self.esperando_respuesta:
+                self.boton_enviar.handle_event(event)
 
-    def update(self, dt): pass
+    def update(self, dt):
+        self.cursor_timer += dt if dt else 0
+        if self.cursor_timer > 500:
+            self.cursor_visible = not self.cursor_visible
+            self.cursor_timer = 0
 
     def draw(self, pantalla):
         mostrar_texto_adaptativo(
@@ -93,7 +97,12 @@ class BotScreen:
         color = (0, 0, 0) if self.texto_usuario else (180, 180, 180)
         superficie = self.font.render(texto, True, color)
         pantalla.blit(superficie, (self.input_rect.x + 10, self.input_rect.y + 10))
-        if self.texto_usuario.strip():
+        if self.cursor_visible and self.texto_usuario != "" and not self.esperando_respuesta:
+            cursor_x = self.input_rect.x + 10 + superficie.get_width() + 2
+            cursor_y = self.input_rect.y + 10
+            cursor_h = superficie.get_height()
+            pygame.draw.line(pantalla, (0, 0, 0), (cursor_x, cursor_y), (cursor_x, cursor_y + cursor_h), 2)
+        if self.texto_usuario.strip() and not self.esperando_respuesta:
             self.boton_enviar.draw(pantalla)
         else:
             rect = self.boton_enviar.rect
@@ -120,7 +129,6 @@ class BotScreen:
             for linea in wrap_text(texto, self.font, ancho_texto):
                 mensajes.append((linea, color))
         for linea, color in mensajes[-max_lines:]:
-            mostrar_texto_adaptativo(
-                pantalla, linea, chat_x + 10, y,
-                ancho_texto, line_height, self.font, color)
+            superficie = self.font.render(linea, True, color)
+            pantalla.blit(superficie, (chat_x + 10, y))
             y += line_height
