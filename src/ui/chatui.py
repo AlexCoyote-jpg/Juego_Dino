@@ -2,6 +2,7 @@ import pygame
 import threading
 from ui.components.utils import dibujar_caja_texto, Boton
 from chatbot.chat import ChatBot
+import time
 
 def wrap_text(texto, fuente, max_width):
     palabras, lineas, linea_actual = texto.split(), [], ""
@@ -22,9 +23,7 @@ class BotScreen:
         self.chatbot = ChatBot()
         self.texto_usuario = ""
         self.font = pygame.font.SysFont("Segoe UI", 28)
-        self.input_rect = pygame.Rect(menu.sx(100), menu.sy(520),
-                                      menu.pantalla.get_width() - menu.sx(200),
-                                      menu.sy(50))
+        self.input_rect = pygame.Rect(menu.sx(100), menu.sy(520), menu.pantalla.get_width() - menu.sx(200), menu.sy(50))
         self.color_input = pygame.Color('lightskyblue3')
         boton_x = self.input_rect.right + menu.sx(10)
         self.boton_enviar = Boton(
@@ -41,30 +40,41 @@ class BotScreen:
         self.esperando_respuesta = False
         self.cursor_visible = True
         self.cursor_timer = 0
+        self.typing_animation_index = 0
+        self.typing_timer = 0
 
     def enviar_mensaje(self):
         mensaje = self.texto_usuario.strip()
         if mensaje and not self.esperando_respuesta:
             self.esperando_respuesta = True
-            self.texto_usuario = ""
             self.chatbot.historial.append(("usuario", mensaje))
-            self.chatbot.historial.append(("bot", "..."))
+            self.chatbot.historial.append(("bot", ""))
+            self.texto_usuario = ""
             threading.Thread(target=self._procesar_en_hilo, args=(mensaje,), daemon=True).start()
 
     def _procesar_en_hilo(self, mensaje):
-        respuesta = self.chatbot.procesar_input(mensaje)
-        # Reemplaza el "..." por la respuesta real
-        for i in range(len(self.chatbot.historial)-1, -1, -1):
-            if self.chatbot.historial[i] == ("bot", "..."):
-                self.chatbot.historial[i] = ("bot", respuesta)
+        respuesta_ia = self.chatbot.procesar_input(mensaje)
+        if respuesta_ia is None:
+            respuesta_display = "[El bot no generó una respuesta]"
+        elif not str(respuesta_ia).strip():
+            respuesta_display = "[Respuesta vacía del bot]"
+        else:
+            respuesta_display = str(respuesta_ia)
+
+        for i in range(len(self.chatbot.historial) - 1, -1, -1):
+            autor, texto = self.chatbot.historial[i]
+            if autor == "bot" and texto == "":
+                self.chatbot.historial[i] = ("bot", respuesta_display)
                 break
         self.esperando_respuesta = False
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN and not self.esperando_respuesta:
-                self.enviar_mensaje()
-            elif event.key == pygame.K_BACKSPACE:
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                if not self.esperando_respuesta and self.texto_usuario.strip():
+                    self.enviar_mensaje()
+                return
+            if event.key == pygame.K_BACKSPACE:
                 self.texto_usuario = self.texto_usuario[:-1]
             elif event.unicode and event.unicode.isprintable():
                 self.texto_usuario += event.unicode
@@ -72,28 +82,33 @@ class BotScreen:
             self.boton_enviar.handle_event(event)
 
     def update(self, dt):
-        self.cursor_timer += dt if dt else 0
-        if self.cursor_timer > 500:
+        self.cursor_timer += dt or 0
+        if self.cursor_timer >= 500:
             self.cursor_visible = not self.cursor_visible
             self.cursor_timer = 0
+        if self.esperando_respuesta:
+            self.typing_timer += dt or 0
+            if self.typing_timer >= 300:
+                self.typing_animation_index = (self.typing_animation_index + 1) % 4
+                self.typing_timer = 0
 
     def draw(self, pantalla):
-        # Título
         titulo = self.font.render("🦖 DinoBot", True, (70, 130, 180))
         pantalla.blit(titulo, (self.menu.sx(100), self.menu.sy(40)))
         self._render_chat(pantalla)
+
         pygame.draw.rect(pantalla, self.color_input, self.input_rect, 2)
-        texto = self.texto_usuario or "Escribe tu mensaje..."
+        texto_display = self.texto_usuario or "Escribe tu mensaje..."
         color = (0, 0, 0) if self.texto_usuario else (180, 180, 180)
-        superficie = self.font.render(texto, True, color)
+        superficie = self.font.render(texto_display, True, color)
         pantalla.blit(superficie, (self.input_rect.x + 10, self.input_rect.y + 10))
-        # Cursor parpadeante
+
         if self.cursor_visible and self.texto_usuario and not self.esperando_respuesta:
             cursor_x = self.input_rect.x + 10 + superficie.get_width() + 2
             cursor_y = self.input_rect.y + 10
             cursor_h = superficie.get_height()
             pygame.draw.line(pantalla, (0, 0, 0), (cursor_x, cursor_y), (cursor_x, cursor_y + cursor_h), 2)
-        # Botón enviar
+
         if self.texto_usuario.strip() and not self.esperando_respuesta:
             self.boton_enviar.draw(pantalla)
         else:
@@ -110,15 +125,31 @@ class BotScreen:
         dibujar_caja_texto(pantalla, chat_x, chat_y, chat_w, chat_h, (245, 245, 255, 220), radius=18)
         line_height = self.menu.sy(45)
         max_lines = (chat_h - 20) // line_height
-        ancho_texto = chat_w - 20
+        ancho_texto = chat_w - 40
         y = chat_y + 10
-        mensajes = [
-            (linea, (70, 130, 180) if autor == "bot" else (0, 0, 0))
-            for autor, texto in self.chatbot.obtener_historial()[-40:]
-            if isinstance(texto, str)
-            for linea in wrap_text(texto, self.font, ancho_texto)
-        ]
-        for linea, color in mensajes[-max_lines:]:
-            superficie = self.font.render(linea, True, color)
-            pantalla.blit(superficie, (chat_x + 10, y))
+        mensajes = []
+        for autor, texto in self.chatbot.obtener_historial()[-40:]:
+            if not isinstance(texto, str):
+                continue
+            color_texto = (70, 130, 180) if autor == "bot" else (0, 0, 0)
+            bg_color = (230, 240, 255) if autor == "bot" else (255, 255, 255)
+            alineacion = "izq" if autor == "bot" else "der"
+            if autor == "bot" and texto == "" and self.esperando_respuesta:
+                texto = "Escribiendo" + "." * self.typing_animation_index
+            for linea in wrap_text(texto, self.font, ancho_texto):
+                mensajes.append((linea, color_texto, bg_color, alineacion))
+
+        for linea, color, bg, ali in mensajes[-max_lines:]:
+            text_surf = self.font.render(linea, True, color)
+            text_rect = text_surf.get_rect()
+            bubble_padding = 14
+            bubble_rect = text_rect.inflate(bubble_padding * 2, 20)
+            if ali == "der":
+                bubble_rect.topright = (chat_x + chat_w - 10, y)
+                text_rect.topright = (chat_x + chat_w - 10 - bubble_padding, y + 10)
+            else:
+                bubble_rect.topleft = (chat_x + 10, y)
+                text_rect.topleft = (chat_x + 10 + bubble_padding, y + 10)
+            pygame.draw.rect(pantalla, bg, bubble_rect, border_radius=12)
+            pantalla.blit(text_surf, text_rect)
             y += line_height
