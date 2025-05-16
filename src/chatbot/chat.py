@@ -15,7 +15,7 @@ class ChatBot:
             self.historial.append(("bot", mensaje_bot))
             return mensaje_bot
 
-        self.historial.append(("usuario", texto_usuario))
+        #self.historial.append(("usuario", texto_usuario))
 
         respuesta = obtener_respuesta(
             user_input=texto_usuario,
