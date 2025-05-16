@@ -124,6 +124,11 @@ class BotScreen:
                 self._last_typing_index = typing_index
 
     def draw(self, pantalla):
+        # Check if window size has changed
+        if pantalla.get_size() != (self.menu.pantalla.get_width(), self.menu.pantalla.get_height()):
+            self._update_layout()
+            self._actualizar_render_cache()
+            
         pantalla.blit(self.titulo_surface, (self.chat_x, self.menu.sy(40)))
         self._render_chat(pantalla)
 
@@ -145,7 +150,8 @@ class BotScreen:
             rect = self.boton_enviar.rect
             pygame.draw.rect(pantalla, (200, 200, 200), rect, border_radius=12)
             texto_btn = self.font.render("Enviar", True, (220, 220, 220))
-            pantalla.blit(texto_btn, (rect.x + 10, rect.y + 10))
+            text_rect = texto_btn.get_rect(center=rect.center)
+            pantalla.blit(texto_btn, text_rect)
 
     def _render_chat(self, pantalla):
         dibujar_caja_texto(pantalla, self.chat_x, self.chat_y, self.chat_w, self.chat_h, (245, 245, 255, 220), radius=18)
@@ -170,9 +176,6 @@ class BotScreen:
             text_rect = text_surf.get_rect()
             bubble_padding = 14
             bubble_rect = text_rect.inflate(bubble_padding * 2, 20)
-            max_bubble_width = self.chat_w - 40
-            if bubble_rect.width > max_bubble_width:
-                bubble_rect.width = max_bubble_width
             if ali == "der":
                 bubble_rect.topright = (self.chat_x + self.chat_w - 10, y)
                 text_rect.topright = (self.chat_x + self.chat_w - 10 - bubble_padding, y + 10)
