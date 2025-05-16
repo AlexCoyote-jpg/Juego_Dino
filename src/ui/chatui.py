@@ -150,10 +150,17 @@ class BotScreen:
         chat_w = pantalla.get_width() - self.menu.sx(200)
         chat_h = self.menu.sy(380)
         dibujar_caja_texto(pantalla, chat_x, chat_y, chat_w, chat_h, (245, 245, 255, 220), radius=18)
+        
         line_height = self.menu.sy(45)
         chat_area_h = chat_h
+
+        # Clipping del área de chat para que nada se salga
+        chat_clip_rect = pygame.Rect(chat_x, chat_y, chat_w - 20, chat_h)
+        pantalla.set_clip(chat_clip_rect)
+
         scroll_offset = self.scroll_manager.update(max(0, self._total_chat_height - chat_area_h), smooth=True)
         y = chat_y + 10 - scroll_offset
+
         self._thumb_rect = None
         for linea, color, bg, ali in self._render_cache:
             if y + line_height < chat_y:
@@ -165,6 +172,10 @@ class BotScreen:
             text_rect = text_surf.get_rect()
             bubble_padding = 14
             bubble_rect = text_rect.inflate(bubble_padding * 2, 20)
+            # Limitar el ancho de la burbuja al área visible
+            max_bubble_width = chat_w - 40
+            if bubble_rect.width > max_bubble_width:
+                bubble_rect.width = max_bubble_width
             if ali == "der":
                 bubble_rect.topright = (chat_x + chat_w - 10, y)
                 text_rect.topright = (chat_x + chat_w - 10 - bubble_padding, y + 10)
@@ -175,6 +186,10 @@ class BotScreen:
             pantalla.blit(text_surf, text_rect)
             y += line_height
 
+        # Restaurar el clipping original
+        pantalla.set_clip(None)
+
+        # Dibujar barra de scroll
         if self._total_chat_height > chat_area_h:
             barra_x = chat_x + chat_w - 18
             barra_y = chat_y
