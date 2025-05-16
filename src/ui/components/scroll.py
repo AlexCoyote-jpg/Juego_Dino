@@ -6,6 +6,7 @@ def dibujar_barra_scroll(superficie, x, y, ancho, alto, scroll_pos, contenido_al
     if contenido_alto <= ventana_alto:
         return
 
+    # Definir colores y parámetros solo una vez
     pastel_bg = (245, 230, 255, 120)
     thumb_color = (180, 220, 255) if highlight else (140, 200, 255)
     thumb_border = (90, 170, 240)
@@ -13,20 +14,21 @@ def dibujar_barra_scroll(superficie, x, y, ancho, alto, scroll_pos, contenido_al
     thumb_radius = max(ancho // 2, 8)
     thumb_min_height = max(40, ventana_alto // 8)
 
+    # Calcular tamaño y posición del thumb
     barra_alto = max(thumb_min_height, ventana_alto * ventana_alto / contenido_alto)
     barra_pos = y + (scroll_pos * (alto - barra_alto) / (contenido_alto - ventana_alto))
 
-    # Fondo de barra
+    # Fondo de barra (solo una superficie, sin alpha si no es necesario)
     s_bg = pygame.Surface((ancho, alto), pygame.SRCALPHA)
     pygame.draw.rect(s_bg, pastel_bg, s_bg.get_rect(), border_radius=ancho)
     superficie.blit(s_bg, (x, y))
 
-    # Thumb principal
+    # Thumb principal (reutilizar superficies si es posible en el ciclo principal)
     s_thumb = pygame.Surface((ancho, int(barra_alto)), pygame.SRCALPHA)
     pygame.draw.rect(s_thumb, thumb_color, s_thumb.get_rect(), border_radius=thumb_radius)
     grad = pygame.Surface((ancho, int(barra_alto)//2), pygame.SRCALPHA)
     pygame.draw.rect(grad, thumb_gloss, grad.get_rect(), border_radius=thumb_radius)
-    s_thumb.blit(grad, (0,0))
+    s_thumb.blit(grad, (0, 0))
     superficie.blit(s_thumb, (x, barra_pos))
 
     # Borde del thumb
@@ -35,9 +37,9 @@ def dibujar_barra_scroll(superficie, x, y, ancho, alto, scroll_pos, contenido_al
     # Carita decorativa solo si es suficientemente grande
     if barra_alto >= 48 and ancho >= 24:
         cx, cy = x + ancho // 2, int(barra_pos + barra_alto // 2)
-        pygame.draw.circle(superficie, (255,255,255), (cx-6, cy-7), 2)
-        pygame.draw.circle(superficie, (255,255,255), (cx+6, cy-7), 2)
-        pygame.draw.arc(superficie, (255,255,255), (cx-7, cy-2, 14, 10), 3.7, 5.7, 2)
+        pygame.draw.circle(superficie, (255, 255, 255), (cx-6, cy-7), 2)
+        pygame.draw.circle(superficie, (255, 255, 255), (cx+6, cy-7), 2)
+        pygame.draw.arc(superficie, (255, 255, 255), (cx-7, cy-2, 14, 10), 3.7, 5.7, 2)
 
 class ScrollManager:
     def __init__(self, initial_pos=0):
@@ -68,6 +70,7 @@ class ScrollManager:
             self.scroll_pos += self.velocity * dt * 10
             self.velocity *= 0.92
 
+        # Clamp scroll positions
         self.scroll_pos = max(0, min(self.scroll_pos, max_scroll))
         self.target_scroll = max(0, min(self.target_scroll, max_scroll))
         return int(self.scroll_pos)
