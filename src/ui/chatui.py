@@ -46,6 +46,7 @@ class BotScreen:
         self._total_chat_height = 0
         self._thumb_rect = None
         self._render_cache = []
+        self._scroll_offset = 0  # Initialize scroll offset
         self.titulo_surface = self.font.render("🦖 DinoBot", True, (70, 130, 180))
         self._last_typing_index = -1
 
@@ -116,6 +117,12 @@ class BotScreen:
     def update(self, dt):
         now = pygame.time.get_ticks()
         self.cursor_visible = (now // 500) % 2 == 0
+        
+        # Calculate scroll offset once per frame
+        self._scroll_offset = self.scroll_manager.update(
+            max(0, self._total_chat_height - self.chat_h), smooth=True
+        )
+        
         if self.esperando_respuesta:
             typing_index = (now // 300) % 4
             if typing_index != self._last_typing_index:
@@ -162,8 +169,8 @@ class BotScreen:
         chat_clip_rect = pygame.Rect(self.chat_x, self.chat_y, self.chat_w - 20, self.chat_h)
         pantalla.set_clip(chat_clip_rect)
 
-        scroll_offset = self.scroll_manager.update(max(0, self._total_chat_height - chat_area_h), smooth=True)
-        y = self.chat_y + 10 - scroll_offset
+        # Use the pre-calculated scroll offset
+        y = self.chat_y + 10 - self._scroll_offset
 
         self._thumb_rect = None
         for linea, color, bg, ali in self._render_cache:
@@ -172,18 +179,7 @@ class BotScreen:
                 continue
             if y > self.chat_y + self.chat_h:
                 break
-            text_surf = self.font.render(linea, True, color)
-            text_rect = text_surf.get_rect()
-            bubble_padding = 14
-            bubble_rect = text_rect.inflate(bubble_padding * 2, 20)
-            if ali == "der":
-                bubble_rect.topright = (self.chat_x + self.chat_w - 10, y)
-                text_rect.topright = (self.chat_x + self.chat_w - 10 - bubble_padding, y + 10)
-            else:
-                bubble_rect.topleft = (self.chat_x + 10, y)
-                text_rect.topleft = (self.chat_x + 10 + bubble_padding, y + 10)
-            pygame.draw.rect(pantalla, bg, bubble_rect, border_radius=12)
-            pantalla.blit(text_surf, text_rect)
+            self._draw_burbuja(pantalla, linea, color, bg, ali, y)
             y += line_height
 
         pantalla.set_clip(None)
@@ -196,6 +192,10 @@ class BotScreen:
             barra_h = self.chat_h
             thumb_h = max(30, int(barra_h * (chat_area_h / self._total_chat_height)))
             max_scroll = self._total_chat_height - chat_area_h
+            
+            # For clarity, use a local reference to self._scroll_offset
+            scroll_offset = self._scroll_offset  # para mantener claridad
+            
             thumb_y = barra_y + int(scroll_offset * (barra_h - thumb_h) / max_scroll) if max_scroll > 0 else barra_y
             self._thumb_rect = pygame.Rect(barra_x, thumb_y, barra_w, thumb_h)
             dibujar_barra_scroll(
@@ -203,3 +203,17 @@ class BotScreen:
                 scroll_offset, self._total_chat_height, chat_area_h,
                 color=(120, 180, 255), highlight=False, modern=True
             )
+
+    def _draw_burbuja(self, pantalla, linea, color, bg, ali, y):
+        text_surf = self.font.render(linea, True, color)
+        text_rect = text_surf.get_rect()
+        bubble_padding = 14
+        bubble_rect = text_rect.inflate(bubble_padding * 2, 20)
+        if ali == "der":
+            bubble_rect.topright = (self.chat_x + self.chat_w - 10, y)
+            text_rect.topright = (self.chat_x + self.chat_w - 10 - bubble_padding, y + 10)
+        else:
+            bubble_rect.topleft = (self.chat_x + 10, y)
+            text_rect.topleft = (self.chat_x + 10 + bubble_padding, y + 10)
+        pygame.draw.rect(pantalla, bg, bubble_rect, border_radius=12)
+        pantalla.blit(text_surf, text_rect)
