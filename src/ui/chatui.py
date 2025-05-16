@@ -23,12 +23,11 @@ class BotScreen:
         self.chatbot = ChatBot()
         self.texto_usuario = ""
         self.font = pygame.font.Font(None, 28)
-        self.input_rect = pygame.Rect(menu.sx(100), menu.sy(520), menu.pantalla.get_width() - menu.sx(200), menu.sy(50))
+        self._update_layout()
         self.color_input = pygame.Color('lightskyblue3')
-        boton_x = self.input_rect.right + menu.sx(10)
         self.boton_enviar = Boton(
             texto="Enviar",
-            x=boton_x,
+            x=self.input_rect.right + menu.sx(10),
             y=self.input_rect.y,
             ancho=menu.sx(80),
             alto=self.input_rect.height,
@@ -48,6 +47,15 @@ class BotScreen:
         self._thumb_rect = None
         self._render_cache = []
         self.titulo_surface = self.font.render("🦖 DinoBot", True, (70, 130, 180))
+        self._last_typing_index = -1
+
+    def _update_layout(self):
+        # Solo llama esto si cambia el tamaño de la ventana
+        self.input_rect = pygame.Rect(self.menu.sx(100), self.menu.sy(520), self.menu.pantalla.get_width() - self.menu.sx(200), self.menu.sy(50))
+        self.chat_x = self.menu.sx(100)
+        self.chat_y = self.menu.sy(120)
+        self.chat_w = self.menu.pantalla.get_width() - self.menu.sx(200)
+        self.chat_h = self.menu.sy(380)
 
     def enviar_mensaje(self):
         mensaje = self.texto_usuario.strip()
@@ -61,10 +69,7 @@ class BotScreen:
 
     def _procesar_en_hilo(self, mensaje):
         respuesta_ia = self.chatbot.procesar_input(mensaje)
-        if not respuesta_ia or not str(respuesta_ia).strip():
-            respuesta_display = "[Respuesta vacía del bot]"
-        else:
-            respuesta_display = str(respuesta_ia)
+        respuesta_display = str(respuesta_ia).strip() or "[Respuesta vacía del bot]"
         for i in range(len(self.chatbot.historial) - 1, -1, -1):
             autor, texto = self.chatbot.historial[i]
             if autor == "bot" and texto == "":
@@ -75,8 +80,7 @@ class BotScreen:
 
     def _actualizar_render_cache(self):
         mensajes, alturas = [], []
-        chat_w = self.menu.pantalla.get_width() - self.menu.sx(200)
-        ancho_texto = chat_w - 40
+        ancho_texto = self.chat_w - 40
         line_height = self.menu.sy(45)
         for autor, texto in self.chatbot.obtener_historial()[-100:]:
             if not isinstance(texto, str):
@@ -106,22 +110,21 @@ class BotScreen:
             self.boton_enviar.handle_event(event)
 
         # Scroll
-        chat_x = self.menu.sx(100)
-        chat_y = self.menu.sy(120)
-        chat_w = self.menu.pantalla.get_width() - self.menu.sx(200)
-        chat_h = self.menu.sy(380)
-        bar_rect = pygame.Rect(chat_x + chat_w - 18, chat_y, 16, chat_h)
-        self.scroll_manager.handle_event(event, 40, self._thumb_rect, max(0, self._total_chat_height - chat_h), chat_h, chat_y, bar_rect)
+        bar_rect = pygame.Rect(self.chat_x + self.chat_w - 18, self.chat_y, 16, self.chat_h)
+        self.scroll_manager.handle_event(event, 40, self._thumb_rect, max(0, self._total_chat_height - self.chat_h), self.chat_h, self.chat_y, bar_rect)
 
     def update(self, dt):
         now = pygame.time.get_ticks()
         self.cursor_visible = (now // 500) % 2 == 0
         if self.esperando_respuesta:
-            self.typing_animation_index = (now // 300) % 4
-            self._actualizar_render_cache()
+            typing_index = (now // 300) % 4
+            if typing_index != self._last_typing_index:
+                self.typing_animation_index = typing_index
+                self._actualizar_render_cache()
+                self._last_typing_index = typing_index
 
     def draw(self, pantalla):
-        pantalla.blit(self.titulo_surface, (self.menu.sx(100), self.menu.sy(40)))
+        pantalla.blit(self.titulo_surface, (self.chat_x, self.menu.sy(40)))
         self._render_chat(pantalla)
 
         pygame.draw.rect(pantalla, self.color_input, self.input_rect, 2)
@@ -145,56 +148,49 @@ class BotScreen:
             pantalla.blit(texto_btn, (rect.x + 10, rect.y + 10))
 
     def _render_chat(self, pantalla):
-        chat_x = self.menu.sx(100)
-        chat_y = self.menu.sy(120)
-        chat_w = pantalla.get_width() - self.menu.sx(200)
-        chat_h = self.menu.sy(380)
-        dibujar_caja_texto(pantalla, chat_x, chat_y, chat_w, chat_h, (245, 245, 255, 220), radius=18)
-        
+        dibujar_caja_texto(pantalla, self.chat_x, self.chat_y, self.chat_w, self.chat_h, (245, 245, 255, 220), radius=18)
         line_height = self.menu.sy(45)
-        chat_area_h = chat_h
+        chat_area_h = self.chat_h
 
         # Clipping del área de chat para que nada se salga
-        chat_clip_rect = pygame.Rect(chat_x, chat_y, chat_w - 20, chat_h)
+        chat_clip_rect = pygame.Rect(self.chat_x, self.chat_y, self.chat_w - 20, self.chat_h)
         pantalla.set_clip(chat_clip_rect)
 
         scroll_offset = self.scroll_manager.update(max(0, self._total_chat_height - chat_area_h), smooth=True)
-        y = chat_y + 10 - scroll_offset
+        y = self.chat_y + 10 - scroll_offset
 
         self._thumb_rect = None
         for linea, color, bg, ali in self._render_cache:
-            if y + line_height < chat_y:
+            if y + line_height < self.chat_y:
                 y += line_height
                 continue
-            if y > chat_y + chat_h:
+            if y > self.chat_y + self.chat_h:
                 break
             text_surf = self.font.render(linea, True, color)
             text_rect = text_surf.get_rect()
             bubble_padding = 14
             bubble_rect = text_rect.inflate(bubble_padding * 2, 20)
-            # Limitar el ancho de la burbuja al área visible
-            max_bubble_width = chat_w - 40
+            max_bubble_width = self.chat_w - 40
             if bubble_rect.width > max_bubble_width:
                 bubble_rect.width = max_bubble_width
             if ali == "der":
-                bubble_rect.topright = (chat_x + chat_w - 10, y)
-                text_rect.topright = (chat_x + chat_w - 10 - bubble_padding, y + 10)
+                bubble_rect.topright = (self.chat_x + self.chat_w - 10, y)
+                text_rect.topright = (self.chat_x + self.chat_w - 10 - bubble_padding, y + 10)
             else:
-                bubble_rect.topleft = (chat_x + 10, y)
-                text_rect.topleft = (chat_x + 10 + bubble_padding, y + 10)
+                bubble_rect.topleft = (self.chat_x + 10, y)
+                text_rect.topleft = (self.chat_x + 10 + bubble_padding, y + 10)
             pygame.draw.rect(pantalla, bg, bubble_rect, border_radius=12)
             pantalla.blit(text_surf, text_rect)
             y += line_height
 
-        # Restaurar el clipping original
         pantalla.set_clip(None)
 
         # Dibujar barra de scroll
         if self._total_chat_height > chat_area_h:
-            barra_x = chat_x + chat_w - 18
-            barra_y = chat_y
+            barra_x = self.chat_x + self.chat_w - 18
+            barra_y = self.chat_y
             barra_w = 16
-            barra_h = chat_h
+            barra_h = self.chat_h
             thumb_h = max(30, int(barra_h * (chat_area_h / self._total_chat_height)))
             max_scroll = self._total_chat_height - chat_area_h
             thumb_y = barra_y + int(scroll_offset * (barra_h - thumb_h) / max_scroll) if max_scroll > 0 else barra_y
