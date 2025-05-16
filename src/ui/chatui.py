@@ -7,7 +7,7 @@ from core.scale.responsive_scaler_basic import ResponsiveScaler
 # Constantes centralizadas
 BUBBLE_PADDING = 14
 MIN_THUMB_HEIGHT = 30
-LINE_SPACING = 20  # espaciado vertical extra en la burbuja
+LINE_SPACING = 0  # El espaciado vertical lo controlamos con el alto de línea real
 
 def wrap_text(texto, fuente, max_width):
     palabras, lineas, linea_actual = texto.split(), [], ""
@@ -160,14 +160,10 @@ class BotScreen:
     def _calcular_offset_ultimo_usuario(self):
         """
         Calcula el offset en el que inicia el último mensaje enviado por el usuario.
-        Recorre el historial acumulando la altura de cada mensaje.
-        
-        Returns:
-            int: El offset target para el scroll.
         """
         offset = 0
         ancho_texto = self.chat_w - 40
-        line_height = self.scaler.scale_y_value(45)
+        line_height = self.font.get_linesize() + max(8, int(self.font.get_linesize() * 0.25)) * 2
         ultimo_usuario_offset = 0
         historial = self.chatbot.obtener_historial()
         for autor, texto in historial:
@@ -181,11 +177,10 @@ class BotScreen:
     def _actualizar_render_cache(self):
         """
         Reconstruye la caché de renderizado del chat basándose en el historial.
-        Solo se llama cuando el historial cambia o el layout cambia.
         """
         mensajes, alturas = [], []
         ancho_texto = self.chat_w - 40
-        line_height = self.scaler.scale_y_value(45)
+        line_height = self.font.get_linesize() + max(8, int(self.font.get_linesize() * 0.25)) * 2
         with self._hist_lock:
             historial = self.chatbot.obtener_historial()[-100:]
         for autor, texto in historial:
@@ -281,7 +276,7 @@ class BotScreen:
     def _render_chat(self, pantalla):
         dibujar_caja_texto(pantalla, self.chat_x, self.chat_y, self.chat_w, self.chat_h,
                              (245, 245, 255, 220), radius=18)
-        line_height = self.menu.sy(45)
+        line_height = self.font.get_linesize() + max(8, int(self.font.get_linesize() * 0.25)) * 2
         chat_area_h = self.chat_h
 
         # Clipping del área de chat
@@ -332,12 +327,15 @@ class BotScreen:
         """
         text_surf = self.font.render(linea, True, color)
         text_rect = text_surf.get_rect()
-        bubble_rect = text_rect.inflate(BUBBLE_PADDING * 2, LINE_SPACING)
+        line_height = self.font.get_linesize()
+        # Calcula el padding vertical para centrar el texto en la burbuja
+        vertical_padding = max(8, int(line_height * 0.25))
+        bubble_rect = text_rect.inflate(BUBBLE_PADDING * 2, vertical_padding * 2)
         if ali == "der":
             bubble_rect.topright = (self.chat_x + self.chat_w - 10, y)
-            text_rect.topright = (self.chat_x + self.chat_w - 10 - BUBBLE_PADDING, y + 10)
+            text_rect.topright = (self.chat_x + self.chat_w - 10 - BUBBLE_PADDING, y + vertical_padding)
         else:
             bubble_rect.topleft = (self.chat_x + 10, y)
-            text_rect.topleft = (self.chat_x + 10 + BUBBLE_PADDING, y + 10)
+            text_rect.topleft = (self.chat_x + 10 + BUBBLE_PADDING, y + vertical_padding)
         pygame.draw.rect(pantalla, bg, bubble_rect, border_radius=12)
         pantalla.blit(text_surf, text_rect)
