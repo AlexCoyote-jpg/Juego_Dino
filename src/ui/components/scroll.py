@@ -1,72 +1,56 @@
 import pygame
 import time
-import unicodedata
-from functools import lru_cache
-from typing import Optional, Tuple, Dict, Any, List, Union, Callable
 
 def dibujar_barra_scroll(superficie, x, y, ancho, alto, scroll_pos, contenido_alto, ventana_alto, 
-                         color=(100, 100, 100), highlight=False, modern=False):
-    """Dibuja una barra de desplazamiento moderna con efecto hover"""
-    # Calcular dimensiones y posición de la barra
+                         color=(120, 180, 255), highlight=False, modern=True):
     if contenido_alto <= ventana_alto:
-        return  # No hace falta barra de scroll
-    
-    barra_alto = max(30, ventana_alto * ventana_alto / contenido_alto)
-    barra_pos = y + (scroll_pos * (alto - barra_alto) / (contenido_alto - ventana_alto))
-    
-    # Estilo moderno con barra minimalista
-    if modern:
-        # Dibujar fondo de la barra (casi invisible)
-        bg_rect = pygame.Rect(x, y, ancho, alto)
-        pygame.draw.rect(superficie, (220, 220, 220, 30), bg_rect, border_radius=ancho//2)
-        
-        # Dibujar la barra con borde suave y redondeado
-        barra_rect = pygame.Rect(x, barra_pos, ancho, barra_alto)
-        
-        # Crear gradiente suave
-        if highlight:
-            color_top = (min(255, color[0]+15), min(255, color[1]+15), min(255, color[2]+15))
-            color_bottom = (max(0, color[0]-15), max(0, color[1]-15), max(0, color[2]-15))
-        else:
-            color_top = color
-            color_bottom = (max(0, color[0]-20), max(0, color[1]-20), max(0, color[2]-20))
-        
-        # Dibuja el gradiente manualmente asegurando colores válidos
-        for i in range(int(barra_alto)):
-            progress = i / barra_alto if barra_alto > 0 else 0
-            r = int(max(0, min(255, color_top[0] * (1 - progress) + color_bottom[0] * progress)))
-            g = int(max(0, min(255, color_top[1] * (1 - progress) + color_bottom[1] * progress)))
-            b = int(max(0, min(255, color_top[2] * (1 - progress) + color_bottom[2] * progress)))
-            pygame.draw.line(superficie, (r, g, b, 200), 
-                            (barra_rect.x, barra_rect.y + i),
-                            (barra_rect.right, barra_rect.y + i))
-        
-        # Añadir brillo en los bordes para efecto 3D sutil
-        pygame.draw.rect(superficie, (255, 255, 255, 100), barra_rect, width=1, border_radius=ancho//2)
-        
-    else:
-        # Estilo tradicional
-        bg_rect = pygame.Rect(x, y, ancho, alto)
-        pygame.draw.rect(superficie, (220, 220, 220), bg_rect, border_radius=ancho//2)
-        
-        barra_rect = pygame.Rect(x, barra_pos, ancho, barra_alto)
-        pygame.draw.rect(superficie, color, barra_rect, border_radius=ancho//2)
-        pygame.draw.rect(superficie, (255, 255, 255), barra_rect, width=1, border_radius=ancho//2)
+        return
 
-# --- Inertial & Time-based Scroll Manager ---
+    pastel_bg = (245, 230, 255, 120)
+    thumb_color = (180, 220, 255) if highlight else (140, 200, 255)
+    thumb_border = (90, 170, 240)
+    thumb_gloss = (255, 255, 255, 90)
+    thumb_radius = max(ancho // 2, 8)
+    thumb_min_height = max(40, ventana_alto // 8)
+
+    barra_alto = max(thumb_min_height, ventana_alto * ventana_alto / contenido_alto)
+    barra_pos = y + (scroll_pos * (alto - barra_alto) / (contenido_alto - ventana_alto))
+
+    # Fondo de barra
+    s_bg = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+    pygame.draw.rect(s_bg, pastel_bg, s_bg.get_rect(), border_radius=ancho)
+    superficie.blit(s_bg, (x, y))
+
+    # Thumb principal
+    s_thumb = pygame.Surface((ancho, int(barra_alto)), pygame.SRCALPHA)
+    pygame.draw.rect(s_thumb, thumb_color, s_thumb.get_rect(), border_radius=thumb_radius)
+    grad = pygame.Surface((ancho, int(barra_alto)//2), pygame.SRCALPHA)
+    pygame.draw.rect(grad, thumb_gloss, grad.get_rect(), border_radius=thumb_radius)
+    s_thumb.blit(grad, (0,0))
+    superficie.blit(s_thumb, (x, barra_pos))
+
+    # Borde del thumb
+    pygame.draw.rect(superficie, thumb_border, pygame.Rect(x, barra_pos, ancho, barra_alto), 3, border_radius=thumb_radius)
+
+    # Carita decorativa solo si es suficientemente grande
+    if barra_alto >= 48 and ancho >= 24:
+        cx, cy = x + ancho // 2, int(barra_pos + barra_alto // 2)
+        pygame.draw.circle(superficie, (255,255,255), (cx-6, cy-7), 2)
+        pygame.draw.circle(superficie, (255,255,255), (cx+6, cy-7), 2)
+        pygame.draw.arc(superficie, (255,255,255), (cx-7, cy-2, 14, 10), 3.7, 5.7, 2)
+
 class ScrollManager:
     def __init__(self, initial_pos=0):
-        self.scroll_pos = initial_pos
-        self.target_scroll = initial_pos
+        self.scroll_pos = self.target_scroll = initial_pos
         self.last_update = time.time()
         self.dragging = False
         self.drag_offset = 0
-        self.velocity = 0.0  # For inertial scrolling
+        self.velocity = 0.0
 
     def update(self, max_scroll, smooth=True):
-        current_time = time.time()
-        dt = current_time - self.last_update
-        self.last_update = current_time
+        now = time.time()
+        dt = now - self.last_update
+        self.last_update = now
 
         if smooth:
             diff = self.target_scroll - self.scroll_pos
@@ -80,10 +64,9 @@ class ScrollManager:
             self.scroll_pos = self.target_scroll
             self.velocity = 0.0
 
-        # Inertial effect
         if not self.dragging and abs(self.velocity) > 0.1:
             self.scroll_pos += self.velocity * dt * 10
-            self.velocity *= 0.92  # Damping
+            self.velocity *= 0.92
 
         self.scroll_pos = max(0, min(self.scroll_pos, max_scroll))
         self.target_scroll = max(0, min(self.target_scroll, max_scroll))
@@ -110,25 +93,21 @@ class ScrollManager:
                     return True
                 elif bar_rect and bar_rect.collidepoint(event.pos):
                     click_y = event.pos[1]
-                    bar_top = y
-                    bar_height = h
                     thumb_height = thumb_rect.height if thumb_rect else 30
-                    rel_y = click_y - bar_top - thumb_height // 2
-                    max_thumb_y = bar_height - thumb_height
+                    rel_y = click_y - y - thumb_height // 2
+                    max_thumb_y = h - thumb_height
                     rel_y = max(0, min(rel_y, max_thumb_y))
-                    if max_scroll > 0 and bar_height > thumb_height:
-                        self.target_scroll = int(rel_y * max_scroll / (bar_height - thumb_height))
+                    if max_scroll > 0 and h > thumb_height:
+                        self.target_scroll = int(rel_y * max_scroll / (h - thumb_height))
                     return True
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
-                self.dragging = False
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.dragging = False
         elif event.type == pygame.MOUSEMOTION and self.dragging and thumb_rect:
             new_thumb_y = event.pos[1] - self.drag_offset
-            bar_height = h
             thumb_height = thumb_rect.height
-            max_thumb_y = y + bar_height - thumb_height
+            max_thumb_y = y + h - thumb_height
             new_thumb_y = max(y, min(new_thumb_y, max_thumb_y))
-            if max_scroll > 0 and bar_height > thumb_height:
-                self.target_scroll = int((new_thumb_y - y) * max_scroll / (bar_height - thumb_height))
+            if max_scroll > 0 and h > thumb_height:
+                self.target_scroll = int((new_thumb_y - y) * max_scroll / (h - thumb_height))
             return True
         return False
