@@ -97,16 +97,18 @@ class ScrollManager:
     def scroll_by(self, delta):
         self.target_scroll += delta
 
-    def scroll_to_bottom(self, max_scroll):
+    def scroll_to_bottom(self, target_offset, instant=False):
         """
-        Actualiza el scroll para ir hasta el final de forma inmediata.
+        Establece el target de scroll, con opción de aplicarlo inmediatamente.
         
         Args:
-            max_scroll (int): Valor máximo de scroll (total - área visible).
+            target_offset: El offset objetivo para el scroll
+            instant: Si es True, aplica el scroll instantáneamente
         """
         with self._lock:
-            self.target_scroll = max_scroll  # Clave de la corrección
-            self.scroll_pos = max_scroll     # Opcional: scroll instantáneo
+            self.target_scroll = target_offset
+            if instant:
+                self.scroll_pos = target_offset
 
     def handle_event(self, event, wheel_speed=40, thumb_rect=None, max_scroll=0, h=0, y=0, bar_rect=None):
         if event.type == pygame.MOUSEBUTTONDOWN:

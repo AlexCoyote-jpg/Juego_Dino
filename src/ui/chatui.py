@@ -66,6 +66,10 @@ class BotScreen:
         self.titulo_surface = self.font.render("🦖 DinoBot", True, (70, 130, 180))
         self._last_typing_index = -1
 
+        # Configuración de scroll
+        self.auto_scroll_enabled = True  # Activar auto-scroll por defecto
+        self.smooth_scroll = True  # Usar scroll suave por defecto
+
     def _update_layout(self):
         """
         Actualiza el layout según el tamaño actual de pantalla.
@@ -146,7 +150,9 @@ class BotScreen:
         umbral = 5
         if abs(target_offset - current_offset) > umbral:
             if getattr(self, "auto_scroll_enabled", True):
-                self.scroll_manager.scroll_to_bottom(target_offset)
+                # Usar la propiedad smooth_scroll para decidir el tipo de scroll
+                instant = not getattr(self, "smooth_scroll", True)
+                self.scroll_manager.scroll_to_bottom(target_offset, instant=instant)
             else:
                 self.mostrar_indicador_nuevo_mensaje()
 
