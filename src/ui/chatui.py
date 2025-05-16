@@ -222,16 +222,26 @@ class BotScreen:
     def update(self, dt):
         now = pygame.time.get_ticks()
         self.cursor_visible = (now // 500) % 2 == 0
-        
+
         self._scroll_offset = self.scroll_manager.update(
             max(0, self._total_chat_height - self.chat_h), smooth=True
         )
-        
+
         if self.esperando_respuesta:
             typing_index = (now // 300) % 4
             if typing_index != self._last_typing_index:
                 self.typing_animation_index = typing_index
-                self._actualizar_render_cache()
+                # Solo actualiza el último mensaje del caché si es "bot" y está vacío
+                if self._render_cache and self.chatbot.historial and self.chatbot.historial[-1][0] == "bot" and self.chatbot.historial[-1][1] == "":
+                    # Re-renderiza solo la última línea del caché
+                    linea = "Escribiendo" + "." * self.typing_animation_index
+                    color_texto = (70, 130, 180)
+                    bg_color = (230, 240, 255)
+                    alineacion = "izq"
+                    # Asume que la última línea del caché es la animación typing
+                    self._render_cache[-1] = (linea, color_texto, bg_color, alineacion)
+                else:
+                    self._actualizar_render_cache()
                 self._last_typing_index = typing_index
 
     def draw(self, pantalla):
