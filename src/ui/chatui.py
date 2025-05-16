@@ -70,51 +70,52 @@ class BotScreen:
         self.auto_scroll_enabled = True  # Activar auto-scroll por defecto
         self.smooth_scroll = True  # Usar scroll suave por defecto
 
+        self._layout_dirty = True  # Marca si el layout necesita actualizarse
+
     def _update_layout(self):
         """
         Actualiza el layout según el tamaño actual de pantalla.
+        Solo recalcula si el tamaño cambió.
         """
         current_size = self.menu.pantalla.get_size()
-        self.last_screen_size = current_size
-        self.scaler.update(current_size[0], current_size[1])
-        
-        screen_width = current_size[0]
-        screen_height = current_size[1]
-        
-        # Calcular dimensiones responsivas
-        self.input_rect = pygame.Rect(
-            self.scaler.scale_x_value(100),
-            self.scaler.scale_y_value(520),
-            screen_width - self.scaler.scale_x_value(200),
-            self.scaler.scale_y_value(50)
-        )
-        
-        self.chat_x = self.scaler.scale_x_value(100)
-        self.chat_y = self.scaler.scale_y_value(120)
-        self.chat_w = screen_width - self.scaler.scale_x_value(200)
-        self.chat_h = self.scaler.scale_y_value(380)
-        
-        font_size = self.scaler.scale_font_size(28)
-        self.font = pygame.font.Font(None, font_size)
-        
-        self.titulo_surface = self.font.render("🦖 DinoBot", True, (70, 130, 180))
-        
-        if hasattr(self, 'boton_enviar'):
-            self.boton_enviar = Boton(
-                texto="Enviar",
-                x=self.input_rect.right + self.scaler.scale_x_value(10),
-                y=self.input_rect.y,
-                ancho=self.scaler.scale_x_value(80),
-                alto=self.input_rect.height,
-                color_normal=(70, 130, 180),
-                color_hover=(100, 160, 210),
-                border_radius=12,
-                on_click=self.enviar_mensaje
+        if current_size != self.last_screen_size:
+            self.last_screen_size = current_size
+            self.scaler.update(current_size[0], current_size[1])
+
+            screen_width = current_size[0]
+            screen_height = current_size[1]
+
+            self.input_rect = pygame.Rect(
+                self.scaler.scale_x_value(100),
+                self.scaler.scale_y_value(520),
+                screen_width - self.scaler.scale_x_value(200),
+                self.scaler.scale_y_value(50)
             )
-        
-        if hasattr(self, '_render_cache') and self._render_cache:
-            self._actualizar_render_cache()
-    
+
+            self.chat_x = self.scaler.scale_x_value(100)
+            self.chat_y = self.scaler.scale_y_value(120)
+            self.chat_w = screen_width - self.scaler.scale_x_value(200)
+            self.chat_h = self.scaler.scale_y_value(380)
+
+            font_size = self.scaler.scale_font_size(28)
+            self.font = pygame.font.Font(None, font_size)
+
+            self.titulo_surface = self.font.render("🦖 DinoBot", True, (70, 130, 180))
+
+            if hasattr(self, 'boton_enviar'):
+                self.boton_enviar = Boton(
+                    texto="Enviar",
+                    x=self.input_rect.right + self.scaler.scale_x_value(10),
+                    y=self.input_rect.y,
+                    ancho=self.scaler.scale_x_value(80),
+                    alto=self.input_rect.height,
+                    color_normal=(70, 130, 180),
+                    color_hover=(100, 160, 210),
+                    border_radius=12,
+                    on_click=self.enviar_mensaje
+                )
+            self._layout_dirty = True  # Marca que el layout cambió
+
     def enviar_mensaje(self):
         mensaje = self.texto_usuario.strip()
         if mensaje and not self.esperando_respuesta:
@@ -180,6 +181,7 @@ class BotScreen:
     def _actualizar_render_cache(self):
         """
         Reconstruye la caché de renderizado del chat basándose en el historial.
+        Solo se llama cuando el historial cambia o el layout cambia.
         """
         mensajes, alturas = [], []
         ancho_texto = self.chat_w - 40
@@ -200,6 +202,7 @@ class BotScreen:
         self._render_cache = mensajes
         self._mensajes_altos = alturas
         self._total_chat_height = sum(alturas)
+        self._layout_dirty = False  # Layout actualizado
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -245,9 +248,11 @@ class BotScreen:
                 self._last_typing_index = typing_index
 
     def draw(self, pantalla):
-        if pantalla.get_size() != self.last_screen_size:
-            self._update_layout()
-        
+        # Solo actualiza el layout y el caché si el tamaño cambió
+        self._update_layout()
+        if self._layout_dirty:
+            self._actualizar_render_cache()
+
         pantalla.blit(self.titulo_surface, (self.chat_x, self.scaler.scale_y_value(40)))
         self._render_chat(pantalla)
 
