@@ -4,6 +4,10 @@ from ui.components.utils import dibujar_caja_texto, Boton
 from chatbot.chat import ChatBot
 from ui.components.scroll import ScrollManager, dibujar_barra_scroll
 from core.scale.responsive_scaler_basic import ResponsiveScaler
+# Constantes centralizadas
+BUBBLE_PADDING = 14
+MIN_THUMB_HEIGHT = 30
+LINE_SPACING = 20  # espaciado vertical extra en la burbuja
 
 def wrap_text(texto, fuente, max_width):
     palabras, lineas, linea_actual = texto.split(), [], ""
@@ -23,6 +27,9 @@ class BotScreen:
         self.menu = menu
         self.chatbot = ChatBot()
         self.texto_usuario = ""
+        
+        # Inicializar el lock para acceso seguro al historial
+        self._hist_lock = threading.Lock()
         
         # Inicializar el escalador responsivo con las dimensiones base
         self.scaler = ResponsiveScaler(
@@ -60,12 +67,13 @@ class BotScreen:
         self._last_typing_index = -1
 
     def _update_layout(self):
-        # Actualizar el último tamaño conocido y el escalador
+        """
+        Actualiza el layout según el tamaño actual de pantalla.
+        """
         current_size = self.menu.pantalla.get_size()
         self.last_screen_size = current_size
         self.scaler.update(current_size[0], current_size[1])
         
-        # Usar el escalador para calcular dimensiones
         screen_width = current_size[0]
         screen_height = current_size[1]
         
@@ -82,14 +90,11 @@ class BotScreen:
         self.chat_w = screen_width - self.scaler.scale_x_value(200)
         self.chat_h = self.scaler.scale_y_value(380)
         
-        # Recalcular el tamaño de fuente basado en la escala
         font_size = self.scaler.scale_font_size(28)
         self.font = pygame.font.Font(None, font_size)
         
-        # Actualizar el título
         self.titulo_surface = self.font.render("🦖 DinoBot", True, (70, 130, 180))
         
-        # Actualizar el botón de enviar si ya está creado
         if hasattr(self, 'boton_enviar'):
             self.boton_enviar = Boton(
                 texto="Enviar",
@@ -103,7 +108,6 @@ class BotScreen:
                 on_click=self.enviar_mensaje
             )
         
-        # Forzar actualización del cache de renderizado
         if hasattr(self, '_render_cache') and self._render_cache:
             self._actualizar_render_cache()
     
@@ -111,28 +115,72 @@ class BotScreen:
         mensaje = self.texto_usuario.strip()
         if mensaje and not self.esperando_respuesta:
             self.esperando_respuesta = True
-            self.chatbot.historial.append(("usuario", mensaje))
-            self.chatbot.historial.append(("bot", ""))
+            with self._hist_lock:
+                self.chatbot.historial.append(("usuario", mensaje))
+                self.chatbot.historial.append(("bot", ""))
             self.texto_usuario = ""
             self._actualizar_render_cache()
             threading.Thread(target=self._procesar_en_hilo, args=(mensaje,), daemon=True).start()
 
     def _procesar_en_hilo(self, mensaje):
+        """
+        Procesa la respuesta del bot en un hilo separado.
+        Actualiza el historial y fuerza el auto-scroll para que se muestre desde el
+        inicio del último mensaje enviado por el usuario.
+        """
         respuesta_ia = self.chatbot.procesar_input(mensaje)
         respuesta_display = str(respuesta_ia).strip() or "[Respuesta vacía del bot]"
-        for i in range(len(self.chatbot.historial) - 1, -1, -1):
-            autor, texto = self.chatbot.historial[i]
-            if autor == "bot" and texto == "":
-                self.chatbot.historial[i] = ("bot", respuesta_display)
-                break
+        with self._hist_lock:
+            for i in range(len(self.chatbot.historial) - 1, -1, -1):
+                autor, texto = self.chatbot.historial[i]
+                if autor == "bot" and texto == "":
+                    self.chatbot.historial[i] = ("bot", respuesta_display)
+                    break
         self.esperando_respuesta = False
+
         self._actualizar_render_cache()
+        
+        # Calcular el offset donde inicia el último mensaje del usuario
+        target_offset = self._calcular_offset_ultimo_usuario()
+        current_offset = self._scroll_offset
+        umbral = 5
+        if abs(target_offset - current_offset) > umbral:
+            if getattr(self, "auto_scroll_enabled", True):
+                self.scroll_manager.scroll_to_bottom(target_offset)
+            else:
+                self.mostrar_indicador_nuevo_mensaje()
+
+    def _calcular_offset_ultimo_usuario(self):
+        """
+        Calcula el offset en el que inicia el último mensaje enviado por el usuario.
+        Recorre el historial acumulando la altura de cada mensaje.
+        
+        Returns:
+            int: El offset target para el scroll.
+        """
+        offset = 0
+        ancho_texto = self.chat_w - 40
+        line_height = self.scaler.scale_y_value(45)
+        ultimo_usuario_offset = 0
+        historial = self.chatbot.obtener_historial()
+        for autor, texto in historial:
+            lineas = wrap_text(texto, self.font, ancho_texto)
+            if autor == "usuario":
+                ultimo_usuario_offset = offset
+            offset += line_height * len(lineas)
+        max_scroll = max(0, self._total_chat_height - self.chat_h)
+        return min(ultimo_usuario_offset, max_scroll)
 
     def _actualizar_render_cache(self):
+        """
+        Reconstruye la caché de renderizado del chat basándose en el historial.
+        """
         mensajes, alturas = [], []
         ancho_texto = self.chat_w - 40
-        line_height = self.scaler.scale_y_value(45)  # Usar el escalador
-        for autor, texto in self.chatbot.obtener_historial()[-100:]:
+        line_height = self.scaler.scale_y_value(45)
+        with self._hist_lock:
+            historial = self.chatbot.obtener_historial()[-100:]
+        for autor, texto in historial:
             if not isinstance(texto, str):
                 continue
             color_texto = (70, 130, 180) if autor == "bot" else (0, 0, 0)
@@ -161,13 +209,14 @@ class BotScreen:
 
         # Scroll
         bar_rect = pygame.Rect(self.chat_x + self.chat_w - 18, self.chat_y, 16, self.chat_h)
-        self.scroll_manager.handle_event(event, 40, self._thumb_rect, max(0, self._total_chat_height - self.chat_h), self.chat_h, self.chat_y, bar_rect)
+        self.scroll_manager.handle_event(event, 40, self._thumb_rect,
+                                           max(0, self._total_chat_height - self.chat_h),
+                                           self.chat_h, self.chat_y, bar_rect)
 
     def update(self, dt):
         now = pygame.time.get_ticks()
         self.cursor_visible = (now // 500) % 2 == 0
         
-        # Calculate scroll offset once per frame
         self._scroll_offset = self.scroll_manager.update(
             max(0, self._total_chat_height - self.chat_h), smooth=True
         )
@@ -180,12 +229,9 @@ class BotScreen:
                 self._last_typing_index = typing_index
 
     def draw(self, pantalla):
-        # Verificar si cambió el tamaño con la referencia almacenada
-        current_size = pantalla.get_size()
-        if current_size != self.last_screen_size:
+        if pantalla.get_size() != self.last_screen_size:
             self._update_layout()
         
-        # Resto del código de dibujo
         pantalla.blit(self.titulo_surface, (self.chat_x, self.scaler.scale_y_value(40)))
         self._render_chat(pantalla)
 
@@ -199,7 +245,8 @@ class BotScreen:
             cursor_x = self.input_rect.x + 10 + superficie.get_width() + 2
             cursor_y = self.input_rect.y + 10
             cursor_h = superficie.get_height()
-            pygame.draw.line(pantalla, (0, 0, 0), (cursor_x, cursor_y), (cursor_x, cursor_y + cursor_h), 2)
+            pygame.draw.line(pantalla, (0, 0, 0), (cursor_x, cursor_y),
+                             (cursor_x, cursor_y + cursor_h), 2)
 
         if self.texto_usuario.strip() and not self.esperando_respuesta:
             self.boton_enviar.draw(pantalla)
@@ -211,17 +258,16 @@ class BotScreen:
             pantalla.blit(texto_btn, text_rect)
 
     def _render_chat(self, pantalla):
-        dibujar_caja_texto(pantalla, self.chat_x, self.chat_y, self.chat_w, self.chat_h, (245, 245, 255, 220), radius=18)
+        dibujar_caja_texto(pantalla, self.chat_x, self.chat_y, self.chat_w, self.chat_h,
+                             (245, 245, 255, 220), radius=18)
         line_height = self.menu.sy(45)
         chat_area_h = self.chat_h
 
-        # Clipping del área de chat para que nada se salga
+        # Clipping del área de chat
         chat_clip_rect = pygame.Rect(self.chat_x, self.chat_y, self.chat_w - 20, self.chat_h)
         pantalla.set_clip(chat_clip_rect)
 
-        # Use the pre-calculated scroll offset
         y = self.chat_y + 10 - self._scroll_offset
-
         self._thumb_rect = None
         for linea, color, bg, ali in self._render_cache:
             if y + line_height < self.chat_y:
@@ -234,18 +280,15 @@ class BotScreen:
 
         pantalla.set_clip(None)
 
-        # Dibujar barra de scroll
         if self._total_chat_height > chat_area_h:
             barra_x = self.chat_x + self.chat_w - 18
             barra_y = self.chat_y
             barra_w = 16
             barra_h = self.chat_h
-            thumb_h = max(30, int(barra_h * (chat_area_h / self._total_chat_height)))
+            thumb_h = max(MIN_THUMB_HEIGHT, int(barra_h * (chat_area_h / self._total_chat_height)))
             max_scroll = self._total_chat_height - chat_area_h
             
-            # For clarity, use a local reference to self._scroll_offset
-            scroll_offset = self._scroll_offset  # para mantener claridad
-            
+            scroll_offset = self._scroll_offset
             thumb_y = barra_y + int(scroll_offset * (barra_h - thumb_h) / max_scroll) if max_scroll > 0 else barra_y
             self._thumb_rect = pygame.Rect(barra_x, thumb_y, barra_w, thumb_h)
             dibujar_barra_scroll(
@@ -255,15 +298,25 @@ class BotScreen:
             )
 
     def _draw_burbuja(self, pantalla, linea, color, bg, ali, y):
+        """
+        Dibuja la burbuja de mensaje.
+        
+        Args:
+            pantalla: Surface de Pygame donde se dibuja.
+            linea (str): Texto a renderizar.
+            color (tuple): Color del texto.
+            bg (tuple): Color de fondo de la burbuja.
+            ali (str): Alineación ("der" o "izq").
+            y (int): Posición vertical.
+        """
         text_surf = self.font.render(linea, True, color)
         text_rect = text_surf.get_rect()
-        bubble_padding = 14
-        bubble_rect = text_rect.inflate(bubble_padding * 2, 20)
+        bubble_rect = text_rect.inflate(BUBBLE_PADDING * 2, LINE_SPACING)
         if ali == "der":
             bubble_rect.topright = (self.chat_x + self.chat_w - 10, y)
-            text_rect.topright = (self.chat_x + self.chat_w - 10 - bubble_padding, y + 10)
+            text_rect.topright = (self.chat_x + self.chat_w - 10 - BUBBLE_PADDING, y + 10)
         else:
             bubble_rect.topleft = (self.chat_x + 10, y)
-            text_rect.topleft = (self.chat_x + 10 + bubble_padding, y + 10)
+            text_rect.topleft = (self.chat_x + 10 + BUBBLE_PADDING, y + 10)
         pygame.draw.rect(pantalla, bg, bubble_rect, border_radius=12)
         pantalla.blit(text_surf, text_rect)

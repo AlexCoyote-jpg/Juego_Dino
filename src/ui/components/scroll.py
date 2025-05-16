@@ -1,5 +1,6 @@
 import pygame
 import time
+import threading
 
 def dibujar_barra_scroll(superficie, x, y, ancho, alto, scroll_pos, contenido_alto, ventana_alto, 
                          color=(120, 180, 255), highlight=False, modern=True):
@@ -42,44 +43,70 @@ def dibujar_barra_scroll(superficie, x, y, ancho, alto, scroll_pos, contenido_al
         pygame.draw.arc(superficie, (255, 255, 255), (cx-7, cy-2, 14, 10), 3.7, 5.7, 2)
 
 class ScrollManager:
-    def __init__(self, initial_pos=0):
-        self.scroll_pos = self.target_scroll = initial_pos
+    def __init__(self):
+        # Variable de posición actual y destino para el scroll
+        self.scroll_pos = 0
+        self.target_scroll = 0
+        # Lock para asegurar acceso thread-safe
+        self._lock = threading.Lock()
         self.last_update = time.time()
         self.dragging = False
         self.drag_offset = 0
         self.velocity = 0.0
 
     def update(self, max_scroll, smooth=True):
-        now = time.time()
-        dt = now - self.last_update
-        self.last_update = now
+        """
+        Actualiza gradualmente la posición actual del scroll hacia el objetivo.
+        
+        Args:
+            max_scroll (int): Valor máximo de scroll.
+            smooth (bool): Si se utiliza interpolación suave.
+            
+        Returns:
+            int: La posición de scroll actualizada.
+        """
+        with self._lock:
+            now = time.time()
+            dt = now - self.last_update
+            self.last_update = now
 
-        if smooth:
-            diff = self.target_scroll - self.scroll_pos
-            if abs(diff) > 0.5:
-                self.velocity = diff * min(1.0, dt * 10)
-                self.scroll_pos += self.velocity
+            if smooth:
+                diff = self.target_scroll - self.scroll_pos
+                if abs(diff) > 0.5:
+                    self.velocity = diff * min(1.0, dt * 10)
+                    self.scroll_pos += self.velocity
+                else:
+                    self.scroll_pos = self.target_scroll
+                    self.velocity = 0.0
             else:
                 self.scroll_pos = self.target_scroll
                 self.velocity = 0.0
-        else:
-            self.scroll_pos = self.target_scroll
-            self.velocity = 0.0
 
-        if not self.dragging and abs(self.velocity) > 0.1:
-            self.scroll_pos += self.velocity * dt * 10
-            self.velocity *= 0.92
+            if not self.dragging and abs(self.velocity) > 0.1:
+                self.scroll_pos += self.velocity * dt * 10
+                self.velocity *= 0.92
 
-        # Clamp scroll positions
-        self.scroll_pos = max(0, min(self.scroll_pos, max_scroll))
-        self.target_scroll = max(0, min(self.target_scroll, max_scroll))
-        return int(self.scroll_pos)
+            # Clamp scroll positions
+            self.scroll_pos = max(0, min(self.scroll_pos, max_scroll))
+            self.target_scroll = max(0, min(self.target_scroll, max_scroll))
+            return int(self.scroll_pos)
 
     def scroll_to(self, pos):
         self.target_scroll = pos
 
     def scroll_by(self, delta):
         self.target_scroll += delta
+
+    def scroll_to_bottom(self, max_scroll):
+        """
+        Actualiza el scroll para ir hasta el final de forma inmediata.
+        
+        Args:
+            max_scroll (int): Valor máximo de scroll (total - área visible).
+        """
+        with self._lock:
+            self.target_scroll = max_scroll  # Clave de la corrección
+            self.scroll_pos = max_scroll     # Opcional: scroll instantáneo
 
     def handle_event(self, event, wheel_speed=40, thumb_rect=None, max_scroll=0, h=0, y=0, bar_rect=None):
         if event.type == pygame.MOUSEBUTTONDOWN:
