@@ -11,7 +11,7 @@ from chatbot.voz import hablar, detener
 from ui.components.utils import obtener_fuente, render_text_cached, Boton
 from ui.components.scroll import ScrollManager, dibujar_barra_scroll
 from ui.components.emoji import mostrar_alternativo_adaptativo, get_emoji_renderer
-from chatbot.prototipo_ineficiente.event_handlers import (
+from chatbot.tests.prototipo_ineficiente.event_handlers import (
     hay_respuesta_bot,
     manejar_voz,
     procesar_mensaje_async,
