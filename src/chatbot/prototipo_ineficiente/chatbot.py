@@ -1,6 +1,6 @@
-from chatbot.event_handlers import process_events
+from src.chatbot.prototipo_ineficiente.event_handlers import process_events
 import pygame
-from chatbot.bot_ui import (
+from chatbot.prototipo_ineficiente.bot_ui import (
     dibujar_entrada, dibujar_botones, renderizar_historial,
     state, historial, scroll_manager, get_visual_constants, set_render_area, get_botones
 )

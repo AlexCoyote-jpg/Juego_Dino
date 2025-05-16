@@ -1,5 +1,5 @@
 import pygame
-from chatbot.chatbot import ChatBotScreen
+from chatbot.prototipo_ineficiente.chatbot import ChatBotScreen
 
 ANCHO_INICIAL, ALTO_INICIAL = 800, 600
 
