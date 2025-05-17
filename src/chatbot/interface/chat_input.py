@@ -2,6 +2,7 @@ import pygame
 import tkinter as tk
 import math
 from ui.components.utils import Boton
+from contextlib import suppress
 
 class ChatInputManager:
     def __init__(self, scaler, input_rect, font, on_send_callback, chatbot=None):
@@ -199,23 +200,17 @@ class ChatInputManager:
             elif event.key == pygame.K_c and ctrl:
                 if self._has_selection():
                     start, end = self._get_selection_range()
-                    try:
+                    with suppress(Exception):
                         r = tk.Tk(); r.withdraw(); r.clipboard_clear(); r.clipboard_append(self.texto_usuario[start:end]); r.update(); r.destroy()
-                    except Exception:
-                        pass
             elif event.key == pygame.K_x and ctrl:
                 if self._has_selection():
                     start, end = self._get_selection_range()
-                    try:
+                    with suppress(Exception):
                         r = tk.Tk(); r.withdraw(); r.clipboard_clear(); r.clipboard_append(self.texto_usuario[start:end]); r.update(); r.destroy()
-                    except Exception:
-                        pass
                     self._delete_selection()
             elif event.key == pygame.K_v and ctrl:
-                try:
+                with suppress(Exception):
                     r = tk.Tk(); r.withdraw(); clip = r.clipboard_get(); self._delete_selection(); self.texto_usuario = self.texto_usuario[:self.cursor_pos] + clip + self.texto_usuario[self.cursor_pos:]; self.cursor_pos += len(clip); self.selection_start = self.selection_end = self.cursor_pos; r.destroy()
-                except Exception:
-                    pass
             elif event.key == pygame.K_BACKSPACE:
                 if self._has_selection():
                     self._delete_selection()
