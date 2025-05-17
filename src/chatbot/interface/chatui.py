@@ -236,6 +236,8 @@ class BotScreen:
         self.input_manager.update()
         # Dibuja el input
         self.input_manager.draw(pantalla, self.esperando_respuesta)
+        if self.esperando_respuesta:
+            self.input_manager.draw_loading_bar(pantalla)
 
     def _draw_burbuja(self, pantalla, linea, color, bg, ali, y):
         """

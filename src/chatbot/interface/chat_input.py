@@ -129,6 +129,22 @@ class ChatInputManager:
                 pygame.draw.line(pantalla, (255, 120, 120), (cursor_x, cursor_y),
                                  (cursor_x, cursor_y + cursor_h), 2)
 
+    def draw_loading_bar(self, pantalla):
+        bar_height = 4
+        bar_width = self.input_rect.width - self.btn_size - 32  # Solo el ancho del input, sin el botón ni padding
+        bar_x = self.input_rect.x + 16
+        bar_y = self.input_rect.bottom + 6
+
+        # Cálculo de desplazamiento animado (píxeles) para la barra
+        time_ms = pygame.time.get_ticks()
+        progress = (time_ms // 10) % (bar_width + 60)
+        chunk_width = 60
+
+        pygame.draw.rect(pantalla, (230, 230, 230), (bar_x, bar_y, bar_width, bar_height), border_radius=2)
+        pygame.draw.rect(pantalla, (255, 120, 120),
+                         (bar_x + (progress % (bar_width + chunk_width)) - chunk_width,
+                          bar_y, chunk_width, bar_height), border_radius=2)
+
     def update_layout(self, input_rect, font):
         self.input_rect = input_rect
         self.font = font
