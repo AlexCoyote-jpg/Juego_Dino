@@ -431,14 +431,24 @@ class ChatInputManager:
         self.cursor_visible = visible
 
     def draw_voice_button(self, pantalla):
+        """Dibuja el botón de voz con el color adecuado según si hay mensaje de IA disponible."""
         enabled = self._hay_mensaje_ia()
-        if not enabled:
-            self.boton_voz.color_top = self.boton_voz.color_bottom = self.boton_voz.color_hover = (200, 200, 200)
+        if enabled:
+            colores = {
+                'color_top': (120, 200, 255),
+                'color_bottom': (180, 240, 255),
+                'color_hover': (100, 180, 220)
+            }
         else:
-            self.boton_voz.color_top = (120, 200, 255)
-            self.boton_voz.color_bottom = (180, 240, 255)
-            self.boton_voz.color_hover = (100, 180, 220)
+            colores = {
+                'color_top': (200, 200, 200),
+                'color_bottom': (200, 200, 200),
+                'color_hover': (200, 200, 200)
+            }
+        for attr, value in colores.items():
+            setattr(self.boton_voz, attr, value)
         self.boton_voz.draw(pantalla)
 
     def handle_voice_event(self, event):
-        self.boton_voz.handle_event(event)
+        """Encapsula el manejo de eventos del botón de voz."""
+        self.boton_voz.handle_event(event) 
