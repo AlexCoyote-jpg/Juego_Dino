@@ -10,7 +10,7 @@ from ui.screen_manager import (
     ScreenManager, HomeScreen, JuegosScreen, ChatBotScreen, GameInstanceScreen,
     set_screen, handle_event_screen, update_screen, draw_screen
 )
-
+from chatbot.interface.chatui import BotScreen
 class MenuPrincipal:
     def __init__(self, pantalla, fondo, images, sounds, config, screen_manager=None):
         self.pantalla = pantalla
@@ -100,12 +100,7 @@ class MenuPrincipal:
                                  ancho - self.sx(200), self.sy(60), pygame.font.SysFont("Segoe UI", 48, bold=True),
                                  (70, 130, 180), centrado=True)
 
-        mostrar_alternativo_adaptativo(
-            self.pantalla,
-            "🦖 ¡Hola! Soy Dino. Pregúntame cualquier cosa sobre matemáticas. Σ 🧠 π",
-            self.sx(120), self.sy(220), ancho - self.sx(240), self.sy(60),
-            self.fonts["texto"], (30, 30, 30), centrado=True
-        )
+        
 
     def mostrar_juegos(self, dificultad):
         self.dificultad_seleccionada = dificultad
@@ -132,7 +127,7 @@ class MenuPrincipal:
             alpha=30,
             radius=24,
             margen=24,
-            tam_caja=160,
+            tam_caja_default=160,  # Updated parameter name to match animations.py
             fuente=self.fonts["texto"]
         )
 
@@ -182,7 +177,7 @@ class MenuPrincipal:
                         elif destino in ("Fácil", "Normal", "Difícil"):
                             set_screen(self.screen_manager, JuegosScreen(self, destino))
                         elif destino == "ChatBot":
-                            set_screen(self.screen_manager, ChatBotScreen(self))
+                            set_screen(self.screen_manager, BotScreen(self))
 
             self.tooltip_manager.update(pygame.mouse.get_pos())
             handle_event_screen(self.screen_manager, events)

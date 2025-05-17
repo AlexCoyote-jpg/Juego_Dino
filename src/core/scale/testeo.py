@@ -3,6 +3,7 @@ from core.juego_base import JuegoBase
 import pygame
 import random
 from ui.components.utils import obtener_fuente
+
 class JuegoEjemplo(JuegoBase):
     def __init__(self, nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
         super().__init__(nombre, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
@@ -13,6 +14,8 @@ class JuegoEjemplo(JuegoBase):
         self.pregunta_actual = 1
         self.respuesta_correcta = 42
         self.opciones = self.generar_opciones(self.respuesta_correcta, 4)
+        # Fuente para instrucciones (usa el scaler animado de la base)
+        self.fuente_instrucciones = obtener_fuente(self.sf(16))
         
         # Elementos UI específicos de este juego
         self.init_responsive_ui()
@@ -32,8 +35,15 @@ class JuegoEjemplo(JuegoBase):
         
     def on_resize(self, ancho, alto):
         """Maneja el redimensionamiento específico para este juego."""
-        # Actualizar posiciones de elementos específicos
+        super().on_resize(ancho, alto)
+        # actualizar fuente y UI responsiva tras cambiar el tamaño
+        self.fuente_instrucciones = obtener_fuente(self.sf(16))
         self.init_responsive_ui()
+        
+    def update(self, dt=None):
+        """Actualiza scaler y lógica del juego."""
+        super().update(dt)
+        # ... aquí podrías añadir lógica específica de JuegoEjemplo ...
         
     def draw(self, surface=None):
         """Dibuja la interfaz del juego."""
@@ -74,7 +84,7 @@ class JuegoEjemplo(JuegoBase):
             "Haz clic en la opción correcta. Presiona ESC para volver al menú.",
             instrucciones_rect[0], instrucciones_rect[1], 
             instrucciones_rect[2], instrucciones_rect[3],
-            fuente=obtener_fuente(self.sf(16)), 
+            fuente=self.fuente_instrucciones,
             color=(100, 100, 100), 
             centrado=True
         )

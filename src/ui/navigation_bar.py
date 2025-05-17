@@ -184,10 +184,12 @@ class NavigationBar:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 self.selected = (self.selected - 1) % len(self.options)
+                return self.selected
             elif event.key == pygame.K_RIGHT:
                 self.selected = (self.selected + 1) % len(self.options)
-            elif event.key == pygame.K_RETURN:
                 return self.selected
+            #elif event.key == pygame.K_RETURN:
+                #return self.selected
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = event.pos
             for idx, boton in enumerate(self.botones):

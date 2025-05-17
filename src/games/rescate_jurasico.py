@@ -1,13 +1,10 @@
 import pygame
-import sys
 import random
 from pygame.locals import *
-from core.juego_base import JuegoBase  # Usa tu base común
+from core.juego_base import JuegoBase
 from ui.components.utils import obtener_fuente
-# Si tienes imágenes, importa/carga aquí
 
 def generar_problema_division(nivel):
-    """Genera un problema de división según el nivel"""
     if nivel == "Básico":
         b = random.randint(1, 5)
         a = b * random.randint(1, 5)
@@ -29,38 +26,44 @@ def generar_problema_division(nivel):
 class JuegoRescate(JuegoBase):
     def __init__(self, pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu):
         super().__init__('Rescate Jurásico', pantalla, config, dificultad, fondo, navbar, images, sounds, return_to_menu)
-        self.problema_actual = ""
-        self.respuesta_correcta = None
-        self.opciones = []
         self.puntuacion = 0
         self.jugadas_totales = 0
-        self.tiempo_mensaje = 0
-        self.mensaje = ""
-        self.opcion_botones = []
         self.posicion_dino = 0
         self.total_pasos = 3
-        self.nivel_completado = False
+        self.mensaje = ""
+        self.tiempo_mensaje = 0
+        self.mensaje_color = (255, 255, 255, 220)
+        self.mensaje_animacion = 1.0
+        self.racha_correctas = 0
+        self.mejor_racha = 0
         self.cargar_imagenes()
         self.generar_problema()
 
     def cargar_imagenes(self):
-        self.dino_mama_img = self.images.get("dino_mama")
-        self.dino_bebe_img = self.images.get("dino_bebe")
-        self.roca_img = self.images.get("roca")
+        self.dino_mama_img = self.images.get("dino5")   # Izquierda
+        self.dino_bebe_img = self.images.get("dino2")     # Derecha
+        self.roca_img = self.images.get("roca")           # Rocas centrales
 
     def generar_problema(self):
-        nivel = self._nivel_from_dificultad(self.dificultad)  # Usa el método de JuegoBase
-        problema, respuesta = generar_problema_division(nivel)
-        self.problema_actual = problema
-        self.respuesta_correcta = respuesta
-        self.opciones = self.generar_opciones(self.respuesta_correcta)
+        nivel = self._nivel_from_dificultad(self.dificultad)
+        self.problema_actual, self.respuesta_correcta = generar_problema_division(nivel)
+        self.opciones = self.generar_opciones(self.respuesta_correcta, cantidad=3)
         random.shuffle(self.opciones)
-        self.tiempo_mensaje = 0
         self.mensaje = ""
+        self.tiempo_mensaje = 0
+
+    def mostrar_feedback(self, correcto, respuesta_correcta=None):
+        if correcto:
+            self.mensaje = "¡Correcto!"
+            self.mensaje_color = (0, 120, 0)
+        else:
+            self.mensaje = f"Incorrecto. Respuesta: {respuesta_correcta}"
+            self.mensaje_color = (180, 40, 40)
+        self.tiempo_mensaje = 60  # duración en frames
 
     def handle_event(self, evento):
         super().handle_event(evento)
-        if evento.type == MOUSEBUTTONDOWN and evento.button == 1:
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             for btn in self.opcion_botones:
                 if btn.rect.collidepoint(evento.pos):
                     self.jugadas_totales += 1
@@ -68,93 +71,101 @@ class JuegoRescate(JuegoBase):
                     if es_correcto:
                         self.puntuacion += 1
                         self.posicion_dino += 1
+                        self.racha_correctas += 1
+                        self.mejor_racha = max(self.mejor_racha, self.racha_correctas)
+                        # Activar animaciones de estrellas y partículas
+                        self.crear_efecto_estrellas(btn.rect.center)
+                        self.crear_explosion_particulas(btn.rect.centerx, btn.rect.centery)
                         self.mostrar_feedback(True)
                         if self.posicion_dino > self.total_pasos:
-                            self.nivel_completado = True
-                            self.mostrar_mensaje_temporal("¡Felicidades! ¡Has rescatado al bebé dinosaurio!")
-                        else:
-                            self.generar_problema()
+                            self.posicion_dino = 0
+                        self.generar_problema()
                     else:
+                        self.racha_correctas = 0
                         self.mostrar_feedback(False, self.respuesta_correcta)
-                    return
+                    break
 
     def update(self, dt=None):
-        if self.tiempo_mensaje > 0:
+        super().update(dt)
+        if self.tiempo_mensaje:
             self.tiempo_mensaje -= 1
+            if self.tiempo_mensaje <= 0:
+                self.mensaje = ""
+        self.update_animacion_estrellas()
+        self.update_particulas()
 
-    def draw(self, surface):
+    def draw(self, surface=None):
+        destino = surface if surface is not None else self.pantalla
         self.dibujar_fondo()
-        self.mostrar_titulo()
 
-        # Mensaje debajo del título
+        # Variables de escalado
+        sx, sy, sf = self.sx, self.sy, self.sf
+        margen_x = sx(40)
+        area_top = self.navbar_height + sy(20)
+        ancho_area = self.ANCHO - 2 * margen_x
+
+        # Mostrar título e instrucciones
+        self.mostrar_titulo()
         self.mostrar_texto(
-            "¡Ayuda a mamá dinosaurio a rescatar a su bebé perdido!",
-            x=40,
-            y=140,  # Ajusta la posición Y según el diseño de tu título
-            w=self.ANCHO - 80,
-            h=40,
-            fuente=obtener_fuente(30, negrita=False),
+            "¡Ayuda a mamá dinosaurio a rescatar a su bebé!",
+            x=margen_x,
+            y=area_top + sy(50),
+            w=ancho_area,
+            h=sy(40),
+            fuente=obtener_fuente(sf(22)),
             color=(80, 80, 80),
             centrado=True
         )
 
-        # Camino y personajes
-        camino_x = 250
-        camino_y = 250
-        espacio_rocas = 120
+        # Área central de imágenes
+        area_img_y = area_top + sy(100)
+        area_img_h = sy(120)
+        roca_espacio = sx(80)
+        roca_w, roca_h = sx(60), sy(60)
+        dino_w, dino_h = sx(80), sy(80)
+        block_width = dino_w + sx(30) + self.total_pasos * roca_espacio + sx(30) + dino_w
+        start_x = (self.ANCHO - block_width) // 2
 
-        # Mamá dino
-        mama_x = 100
-        if self.posicion_dino > 0:
-            mama_x = camino_x + (self.posicion_dino - 1) * espacio_rocas
+        # Dibujar mamá dino
         if self.dino_mama_img:
-            self.pantalla.blit(self.dino_mama_img, (mama_x, camino_y))
+            img_mama = pygame.transform.smoothscale(self.dino_mama_img, (int(dino_w), int(dino_h)))
+            destino.blit(img_mama, (start_x, area_img_y + area_img_h//2 - dino_h//2))
 
-        # Rocas
+        # Dibujar rocas centrales
+        roca_start_x = start_x + dino_w + sx(30)
         if self.roca_img:
+            img_roca = pygame.transform.smoothscale(self.roca_img, (int(roca_w), int(roca_h)))
             for i in range(self.total_pasos):
-                self.pantalla.blit(self.roca_img, (camino_x + i * espacio_rocas, camino_y))
+                x = roca_start_x + i * roca_espacio
+                destino.blit(img_roca, (x, area_img_y + area_img_h//2 - roca_h//2))
 
-        # Bebé dino
+        # Dibujar bebé dino
+        bebe_x = roca_start_x + self.total_pasos * roca_espacio + sx(30)
         if self.dino_bebe_img:
-            bebe_x = camino_x + self.total_pasos * espacio_rocas + 20
-            self.pantalla.blit(self.dino_bebe_img, (bebe_x, camino_y + 10))
+            img_bebe = pygame.transform.smoothscale(self.dino_bebe_img, (int(dino_w), int(dino_h)))
+            destino.blit(img_bebe, (bebe_x, area_img_y + area_img_h//2 - dino_h//2 + sy(10)))
 
-        # Problema
-        enunciado_y = camino_y + 120
-        enunciado_h = 80
-        enunciado_fuente = obtener_fuente(28, negrita=False)
+        # Mostrar enunciado del problema
+        enunciado_y = area_img_y + area_img_h + sy(10)
         self.mostrar_texto(
             self.problema_actual,
-            x=40,
+            x=margen_x,
             y=enunciado_y,
-            w=self.ANCHO - 80,
-            h=enunciado_h,
-            fuente=enunciado_fuente,
+            w=ancho_area,
+            h=sy(60),
+            fuente=obtener_fuente(sf(22)),
             color=(30, 30, 30),
             centrado=True
         )
 
-        # Opciones
-        if not self.nivel_completado:
-            opciones_y = enunciado_y + enunciado_h + 30
-            self.dibujar_opciones(y0=opciones_y)
-        else:
-            self.mostrar_texto(
-                "¡Nivel completado! ¡Has rescatado al bebé dinosaurio!",
-                x=40,
-                y=enunciado_y + enunciado_h + 30,
-                w=self.ANCHO - 80,
-                h=60,
-                fuente=obtener_fuente(30, negrita=True),
-                color=(0, 120, 0),
-                centrado=True
-            )
-
-        # Feedback
+        # Dibujar opciones de respuesta
+        self.dibujar_opciones(y0=enunciado_y + sy(60) + sy(10))
+        
+        # Mostrar feedback y animaciones
         self.dibujar_feedback()
+        self.draw_animacion_estrellas()
+        self.draw_particulas()
 
-        # Puntaje
+        # Mostrar puntaje y racha
         self.mostrar_puntaje(self.puntuacion, self.jugadas_totales, "Puntuación")
-
-# Para usar esta clase, crea una instancia pasando los argumentos requeridos por JuegoBase.
+        self.mostrar_racha()
