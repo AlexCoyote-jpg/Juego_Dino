@@ -1,5 +1,6 @@
 import pygame
 import tkinter as tk
+import math
 
 from ui.components.utils import Boton
 
@@ -130,20 +131,76 @@ class ChatInputManager:
                                  (cursor_x, cursor_y + cursor_h), 2)
 
     def draw_loading_bar(self, pantalla):
-        bar_height = 4
-        bar_width = self.input_rect.width - self.btn_size - 32  # Solo el ancho del input, sin el botón ni padding
-        bar_x = self.input_rect.x + 16
-        bar_y = self.input_rect.bottom + 6
-
-        # Cálculo de desplazamiento animado (píxeles) para la barra
+        # Barra de carga que rodea todo el input area (borde exterior animado, siguiendo el borde redondeado)
+        border_radius = self.input_rect.height // 2
+        bar_thickness = 4
         time_ms = pygame.time.get_ticks()
-        progress = (time_ms // 10) % (bar_width + 60)
-        chunk_width = 60
-
-        pygame.draw.rect(pantalla, (230, 230, 230), (bar_x, bar_y, bar_width, bar_height), border_radius=2)
-        pygame.draw.rect(pantalla, (255, 120, 120),
-                         (bar_x + (progress % (bar_width + chunk_width)) - chunk_width,
-                          bar_y, chunk_width, bar_height), border_radius=2)
+        w, h = self.input_rect.width, self.input_rect.height
+        # Perímetro real: lados rectos + arcos de esquinas
+        arc_len = 0.5 * 3.1416 * border_radius * 4  # 4 esquinas
+        line_len = 2 * (w - 2 * border_radius) + 2 * (h - 2 * border_radius)
+        perimeter = arc_len + line_len
+        # Animación: segmento móvil
+        progress = (time_ms // 3) % int(perimeter)
+        chunk_len = int(perimeter * 0.18)
+        # Dibuja fondo del borde
+        pygame.draw.rect(pantalla, (230, 230, 230), self.input_rect.inflate(bar_thickness*2, bar_thickness*2),
+                         width=bar_thickness, border_radius=border_radius+2)
+        # Prepara puntos a lo largo del borde redondeado
+        n_segments = int(perimeter // 2)
+        points = []
+        rect = self.input_rect.inflate(bar_thickness*2, bar_thickness*2)
+        r = border_radius + 2
+        # Top line
+        for i in range(int(w - 2*r)):
+            x = rect.left + r + i
+            y = rect.top
+            points.append((x, y))
+        # Top-right arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.right - r + r * math.cos(angle)
+            y = rect.top + r - r * math.sin(angle)
+            points.append((x, y))
+        # Right line
+        for i in range(int(h - 2*r)):
+            x = rect.right
+            y = rect.top + r + i
+            points.append((x, y))
+        # Bottom-right arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.right - r + r * math.cos(angle)
+            y = rect.bottom - r + r * math.sin(angle)
+            points.append((x, y))
+        # Bottom line
+        for i in range(int(w - 2*r)):
+            x = rect.right - r - i
+            y = rect.bottom
+            points.append((x, y))
+        # Bottom-left arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.left + r - r * math.cos(angle)
+            y = rect.bottom - r + r * math.sin(angle)
+            points.append((x, y))
+        # Left line
+        for i in range(int(h - 2*r)):
+            x = rect.left
+            y = rect.bottom - r - i
+            points.append((x, y))
+        # Top-left arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.left + r - r * math.cos(angle)
+            y = rect.top + r - r * math.sin(angle)
+            points.append((x, y))
+        # Dibuja segmento animado
+        for i in range(len(points)):
+            seg_pos = (progress + i) % len(points)
+            if seg_pos < chunk_len:
+                x, y = points[i]
+                pygame.draw.circle(pantalla, (255, 120, 120), (int(x), int(y)), bar_thickness//2+1)
 
     def update_layout(self, input_rect, font):
         self.input_rect = input_rect
