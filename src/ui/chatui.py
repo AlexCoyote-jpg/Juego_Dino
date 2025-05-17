@@ -119,9 +119,6 @@ class BotScreen:
         mensaje = self.texto_usuario.strip()
         if mensaje and not self.esperando_respuesta:
             self.esperando_respuesta = True
-            with self._hist_lock:
-                self.chatbot.historial.append(("usuario", mensaje))
-                self.chatbot.historial.append(("bot", ""))
             self.texto_usuario = ""
             self._render_cache_dirty = True
             threading.Thread(target=self._procesar_en_hilo, args=(mensaje,), daemon=True).start()
@@ -132,14 +129,7 @@ class BotScreen:
         Actualiza el historial y fuerza el auto-scroll para que se muestre desde el
         inicio del último mensaje enviado por el usuario.
         """
-        respuesta_ia = self.chatbot.procesar_input(mensaje)
-        respuesta_display = str(respuesta_ia).strip() or "[Respuesta vacía del bot]"
-        with self._hist_lock:
-            for i in range(len(self.chatbot.historial) - 1, -1, -1):
-                autor, texto = self.chatbot.historial[i]
-                if autor == "bot" and texto == "":
-                    self.chatbot.historial[i] = ("bot", respuesta_display)
-                    break
+        self.chatbot.procesar_input(mensaje)
         self.esperando_respuesta = False
         self._render_cache_dirty = True
         

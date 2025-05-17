@@ -15,15 +15,22 @@ class ChatBot:
             self.historial.append(("bot", mensaje_bot))
             return mensaje_bot
 
-        #self.historial.append(("usuario", texto_usuario))
+        # Agregar mensaje del usuario al historial
+        self.historial.append(("usuario", texto_usuario))
+        # Agregar mensaje vacío del bot para animación de "escribiendo" (opcional)
+        self.historial.append(("bot", ""))
 
         respuesta = obtener_respuesta(
             user_input=texto_usuario,
             modelo=LLAMA.model,
             servicio_key=LLAMA.api_key,
         )
-        self.historial.append(("bot", respuesta))
-        #logging.info("Respuesta recibida del modelo IA: %s", respuesta)
+        # Reemplazar el último mensaje vacío del bot con la respuesta real
+        for i in range(len(self.historial) - 1, -1, -1):
+            autor, texto = self.historial[i]
+            if autor == "bot" and texto == "":
+                self.historial[i] = ("bot", respuesta)
+                break
         return respuesta
 
     def obtener_historial(self) -> List[Tuple[str, str]]:
