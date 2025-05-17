@@ -17,16 +17,14 @@ class BotScreen:
     def __init__(self, menu):
         self.menu = menu
         self.chatbot = ChatBot()
-        
-        # Inicializar el lock para acceso seguro al historial
         self._hist_lock = threading.Lock()
-        
-        # Inicializar el escalador responsivo con las dimensiones base
+        # Usar resolución base predefinida para el escalador
+        BASE_WIDTH = 800
+        BASE_HEIGHT = 600
         self.scaler = ResponsiveScaler(
-            base_width=self.menu.pantalla.get_width(),
-            base_height=self.menu.pantalla.get_height()
+            base_width=BASE_WIDTH,
+            base_height=BASE_HEIGHT
         )
-        
         self.last_screen_size = (0, 0)  # Almacenar el último tamaño conocido
 
         # Inicializar input_rect y font ANTES de crear input_manager
@@ -56,6 +54,8 @@ class BotScreen:
         self.auto_scroll_enabled = True  # Activar auto-scroll por defecto
         self.smooth_scroll = True  # Usar scroll suave por defecto
 
+        # Calcular layout real antes de crear input_manager
+        self._update_layout(force=True, before_input_manager=True)
         # Inicializar ChatInputManager
         self.input_manager = ChatInputManager(
             self.scaler, self.input_rect, self.font, self.enviar_mensaje, chatbot=self.chatbot
@@ -65,7 +65,7 @@ class BotScreen:
         self._render_cache_dirty = True  # Marca si la caché de renderizado necesita actualizarse
         self._update_layout(force=True)
 
-    def _update_layout(self, force=False):
+    def _update_layout(self, force=False, before_input_manager=False):
         """
         Actualiza el layout según el tamaño actual de pantalla.
         Solo recalcula si el tamaño cambió.
@@ -93,7 +93,8 @@ class BotScreen:
 
             self.titulo_surface = self.font.render("🦖 DinoBot", True, (70, 130, 180))
 
-            self.input_manager.update_layout(self.input_rect, self.font)
+            if not before_input_manager:
+                self.input_manager.update_layout(self.input_rect, self.font)
             self._layout_dirty = True  # Marca que el layout cambió
             self._render_cache_dirty = True  # Marca que la caché de renderizado cambió
 
