@@ -345,10 +345,11 @@ class ChatInputManager:
         self.boton_voz.ancho = self.btn_size
         self.boton_voz.alto = self.btn_size
         self.draw_voice_button(pantalla)
-        # Texto y selección
+        # Ajustar márgenes para el área de texto
         text_area_right = self.boton_enviar.x - 16
+        text_area_left = self.boton_voz.x + self.boton_voz.ancho + 8  # margen después del botón voz
         color_texto = (120, 120, 120) if self.texto_usuario else (180, 180, 185)
-        text_x = self.input_rect.x + 28
+        text_x = text_area_left
         text_y = self.input_rect.y + (self.input_rect.height - self.font.get_height()) // 2
         max_text_width = text_area_right - text_x
         pre_cursor = self.texto_usuario[:self.cursor_pos]
@@ -451,4 +452,4 @@ class ChatInputManager:
 
     def handle_voice_event(self, event):
         """Encapsula el manejo de eventos del botón de voz."""
-        self.boton_voz.handle_event(event) 
+        self.boton_voz.handle_event(event)
