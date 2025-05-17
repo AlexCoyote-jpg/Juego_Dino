@@ -61,6 +61,12 @@ class ChatInputManager:
         self._update_loading_border_points()
 
         self.cursor_pos = 0  # posición del cursor en el texto
+        self.selection_start = 0
+        self.selection_end = 0
+        self._undo_stack = []
+        self._undo_limit = 50
+
+        self._mouse_selecting = False
 
     def _update_loading_border_points(self):
         # Calcula y guarda los puntos del borde animado
@@ -122,44 +128,219 @@ class ChatInputManager:
         self._loading_border_chunk_len = int(self._loading_border_perimeter * 0.18)
         self._loading_border_last_rect = rect
 
+    def _has_selection(self):
+        return self.selection_start != self.selection_end
+
+    def _get_selection_range(self):
+        return min(self.selection_start, self.selection_end), max(self.selection_start, self.selection_end)
+
+    def _delete_selection(self):
+        if self._has_selection():
+            start, end = self._get_selection_range()
+            self.texto_usuario = self.texto_usuario[:start] + self.texto_usuario[end:]
+            self.cursor_pos = start
+            self.selection_start = self.selection_end = self.cursor_pos
+
+    def _push_undo(self):
+        # Guarda el estado actual en el stack de deshacer
+        if len(self._undo_stack) >= self._undo_limit:
+            self._undo_stack.pop(0)
+        self._undo_stack.append((self.texto_usuario, self.cursor_pos, self.selection_start, self.selection_end))
+
+    def _pop_undo(self):
+        if self._undo_stack:
+            last = self._undo_stack.pop()
+            self.texto_usuario, self.cursor_pos, self.selection_start, self.selection_end = last
+
+    def _get_char_index_from_mouse(self, mx, text_x, scroll_offset):
+        # Devuelve el índice de carácter más cercano a la posición x del mouse (optimizado)
+        x = mx - text_x + scroll_offset
+        if not self.texto_usuario:
+            return 0
+        # Búsqueda binaria para encontrar el carácter más cercano
+        left, right = 0, len(self.texto_usuario)
+        while left < right:
+            mid = (left + right) // 2
+            w = self.font.size(self.texto_usuario[:mid+1])[0]
+            if x < w:
+                right = mid
+            else:
+                left = mid + 1
+        return left
+
     def handle_event(self, event, esperando_respuesta):
         if event.type == pygame.KEYDOWN:
+            mods = pygame.key.get_mods()
+            shift = mods & pygame.KMOD_SHIFT
+            ctrl = mods & pygame.KMOD_CTRL
+            if event.key == pygame.K_z and ctrl:
+                self._pop_undo()
+                return None
+            # Antes de cualquier edición, guarda el estado para deshacer
+            if (event.key in (pygame.K_BACKSPACE, pygame.K_DELETE) or
+                (event.unicode and event.unicode.isprintable()) or
+                (event.key == pygame.K_v and ctrl) or
+                (event.key == pygame.K_x and ctrl)):
+                self._push_undo()
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 return 'send'
-            elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_CTRL:
+            elif event.key == pygame.K_c and ctrl:
+                # Copiar selección
+                if self._has_selection():
+                    start, end = self._get_selection_range()
+                    try:
+                        r = tk.Tk()
+                        r.withdraw()
+                        r.clipboard_clear()
+                        r.clipboard_append(self.texto_usuario[start:end])
+                        r.update()
+                        r.destroy()
+                    except Exception:
+                        pass
+            elif event.key == pygame.K_x and ctrl:
+                # Cortar selección
+                if self._has_selection():
+                    start, end = self._get_selection_range()
+                    try:
+                        r = tk.Tk()
+                        r.withdraw()
+                        r.clipboard_clear()
+                        r.clipboard_append(self.texto_usuario[start:end])
+                        r.update()
+                        r.destroy()
+                    except Exception:
+                        pass
+                    self._delete_selection()
+            elif event.key == pygame.K_v and ctrl:
                 try:
                     r = tk.Tk()
                     r.withdraw()
                     clip = r.clipboard_get()
+                    self._delete_selection()
                     self.texto_usuario = self.texto_usuario[:self.cursor_pos] + clip + self.texto_usuario[self.cursor_pos:]
                     self.cursor_pos += len(clip)
+                    self.selection_start = self.selection_end = self.cursor_pos
                     r.destroy()
                 except Exception:
                     pass
             elif event.key == pygame.K_BACKSPACE:
-                if self.cursor_pos > 0:
+                if self._has_selection():
+                    self._delete_selection()
+                elif self.cursor_pos > 0:
                     self.texto_usuario = self.texto_usuario[:self.cursor_pos-1] + self.texto_usuario[self.cursor_pos:]
                     self.cursor_pos -= 1
                 self.last_backspace_time = pygame.time.get_ticks()
                 self.backspace_first_press_time = self.last_backspace_time
                 self.backspace_held = True
+                self.selection_start = self.selection_end = self.cursor_pos
+            elif event.key == pygame.K_DELETE:
+                if self._has_selection():
+                    self._delete_selection()
+                elif self.cursor_pos < len(self.texto_usuario):
+                    self.texto_usuario = self.texto_usuario[:self.cursor_pos] + self.texto_usuario[self.cursor_pos+1:]
+                self.selection_start = self.selection_end = self.cursor_pos
             elif event.key == pygame.K_LEFT:
-                if self.cursor_pos > 0:
-                    self.cursor_pos -= 1
+                if ctrl:
+                    # Salto de palabra a la izquierda
+                    if self.cursor_pos > 0:
+                        pos = self.cursor_pos - 1
+                        while pos > 0 and self.texto_usuario[pos].isspace():
+                            pos -= 1
+                        while pos > 0 and not self.texto_usuario[pos-1].isspace():
+                            pos -= 1
+                        self.cursor_pos = pos
+                else:
+                    if self.cursor_pos > 0:
+                        self.cursor_pos -= 1
+                if shift:
+                    self.selection_end = self.cursor_pos
+                else:
+                    self.selection_start = self.selection_end = self.cursor_pos
             elif event.key == pygame.K_RIGHT:
-                if self.cursor_pos < len(self.texto_usuario):
-                    self.cursor_pos += 1
+                if ctrl:
+                    pos = self.cursor_pos
+                    n = len(self.texto_usuario)
+                    while pos < n and not self.texto_usuario[pos].isspace():
+                        pos += 1
+                    while pos < n and self.texto_usuario[pos].isspace():
+                        pos += 1
+                    self.cursor_pos = pos
+                else:
+                    if self.cursor_pos < len(self.texto_usuario):
+                        self.cursor_pos += 1
+                if shift:
+                    self.selection_end = self.cursor_pos
+                else:
+                    self.selection_start = self.selection_end = self.cursor_pos
+            elif event.key == pygame.K_HOME:
+                self.cursor_pos = 0
+                if shift:
+                    self.selection_end = self.cursor_pos
+                else:
+                    self.selection_start = self.selection_end = self.cursor_pos
+            elif event.key == pygame.K_END:
+                self.cursor_pos = len(self.texto_usuario)
+                if shift:
+                    self.selection_end = self.cursor_pos
+                else:
+                    self.selection_start = self.selection_end = self.cursor_pos
             elif event.unicode and event.unicode.isprintable():
+                self._delete_selection()
                 self.texto_usuario = self.texto_usuario[:self.cursor_pos] + event.unicode + self.texto_usuario[self.cursor_pos:]
                 self.cursor_pos += 1
+                self.selection_start = self.selection_end = self.cursor_pos
+            # Clamp por seguridad
+            self.cursor_pos = max(0, min(self.cursor_pos, len(self.texto_usuario)))
+            self.selection_start = max(0, min(self.selection_start, len(self.texto_usuario)))
+            self.selection_end = max(0, min(self.selection_end, len(self.texto_usuario)))
 
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_BACKSPACE:
                 self.backspace_held = False
 
         elif event.type == pygame.MOUSEBUTTONDOWN and not esperando_respuesta:
-            self.boton_enviar.handle_event(event)
-
+            mx, my = event.pos
+            # Solo si el clic está dentro del área de texto
+            text_area_right = self.boton_enviar.x - 16
+            text_x = self.input_rect.x + 28
+            text_y = self.input_rect.y + (self.input_rect.height - self.font.get_height()) // 2
+            max_text_width = text_area_right - text_x
+            color_texto = (120, 120, 120) if self.texto_usuario else (180, 180, 185)
+            rendered_full = self.font.render(self.texto_usuario, True, color_texto)
+            scroll_offset = 0
+            rendered_pre = self.font.render(self.texto_usuario[:self.cursor_pos], True, color_texto)
+            if rendered_full.get_width() > max_text_width:
+                if rendered_pre.get_width() > max_text_width:
+                    scroll_offset = rendered_pre.get_width() - max_text_width + 10
+                elif rendered_full.get_width() - rendered_pre.get_width() < max_text_width:
+                    scroll_offset = rendered_full.get_width() - max_text_width
+            if self.input_rect.collidepoint(mx, my):
+                idx = self._get_char_index_from_mouse(mx, text_x, scroll_offset)
+                self.cursor_pos = idx
+                self.selection_start = self.selection_end = idx
+                self._mouse_selecting = True
+        elif event.type == pygame.MOUSEMOTION and self._mouse_selecting and not esperando_respuesta:
+            mx, my = event.pos
+            text_area_right = self.boton_enviar.x - 16
+            text_x = self.input_rect.x + 28
+            text_y = self.input_rect.y + (self.input_rect.height - self.font.get_height()) // 2
+            max_text_width = text_area_right - text_x
+            color_texto = (120, 120, 120) if self.texto_usuario else (180, 180, 185)
+            rendered_full = self.font.render(self.texto_usuario, True, color_texto)
+            rendered_pre = self.font.render(self.texto_usuario[:self.cursor_pos], True, color_texto)
+            scroll_offset = 0
+            if rendered_full.get_width() > max_text_width:
+                if rendered_pre.get_width() > max_text_width:
+                    scroll_offset = rendered_pre.get_width() - max_text_width + 10
+                elif rendered_full.get_width() - rendered_pre.get_width() < max_text_width:
+                    scroll_offset = rendered_full.get_width() - max_text_width
+            if self.input_rect.collidepoint(mx, my):
+                idx = self._get_char_index_from_mouse(mx, text_x, scroll_offset)
+                self.cursor_pos = idx
+                self.selection_end = idx
+        elif event.type == pygame.MOUSEBUTTONUP:
+            self._mouse_selecting = False
+        # ...existing code...
         return None
 
     def update(self):
@@ -168,10 +349,16 @@ class ChatInputManager:
             current_time = pygame.time.get_ticks()
             if current_time - self.backspace_first_press_time > self.backspace_repeat_delay:
                 if current_time - self.last_backspace_time >= self.backspace_delay:
-                    if self.cursor_pos > 0:
+                    if self._has_selection():
+                        self._delete_selection()
+                    elif self.cursor_pos > 0:
                         self.texto_usuario = self.texto_usuario[:self.cursor_pos-1] + self.texto_usuario[self.cursor_pos:]
                         self.cursor_pos -= 1
                     self.last_backspace_time = current_time
+            # Clamp por seguridad
+            self.cursor_pos = max(0, min(self.cursor_pos, len(self.texto_usuario)))
+            self.selection_start = max(0, min(self.selection_start, len(self.texto_usuario)))
+            self.selection_end = max(0, min(self.selection_end, len(self.texto_usuario)))
         # Parpadeo del cursor
         now = pygame.time.get_ticks()
         if now - self.last_cursor_toggle > self.cursor_interval:
@@ -200,58 +387,45 @@ class ChatInputManager:
 
         # Dibujar texto
         text_area_right = self.boton_enviar.x - 16
-        texto_display = self.texto_usuario or "Escribe tu mensaje..."
         color_texto = (120, 120, 120) if self.texto_usuario else (180, 180, 185)
-        superficie = self.font.render(texto_display, True, color_texto)
         text_x = self.input_rect.x + 28
-        text_y = self.input_rect.y + (self.input_rect.height - superficie.get_height()) // 2
+        text_y = self.input_rect.y + (self.input_rect.height - self.font.get_height()) // 2
         max_text_width = text_area_right - text_x
 
-        # Recorte de texto si es necesario
-        display_text = self.texto_usuario
-        cursor_render_x = text_x
-        if self.texto_usuario:
-            # Calcular el texto visible y la posición del cursor
-            pre_cursor = self.texto_usuario[:self.cursor_pos]
-            suf_cursor = self.texto_usuario[self.cursor_pos:]
-            rendered_pre = self.font.render(pre_cursor, True, color_texto)
-            rendered_full = self.font.render(self.texto_usuario, True, color_texto)
-            if rendered_full.get_width() > max_text_width:
-                # Recortar por la derecha
-                for i in range(len(self.texto_usuario), 0, -1):
-                    recortado = self.texto_usuario[:i] + '...'
-                    superficie = self.font.render(recortado, True, color_texto)
-                    if superficie.get_width() <= max_text_width:
-                        display_text = recortado
-                        break
-                # Ajustar cursor_render_x para que siga el texto recortado
-                rendered_pre = self.font.render(pre_cursor, True, color_texto)
-                if rendered_pre.get_width() > max_text_width:
-                    # Si el cursor está fuera, lo pegamos al final
-                    cursor_render_x = text_x + max_text_width
-                else:
-                    cursor_render_x = text_x + rendered_pre.get_width()
-            else:
-                display_text = self.texto_usuario
-                cursor_render_x = text_x + rendered_pre.get_width()
-        else:
-            display_text = "Escribe tu mensaje..."
-            cursor_render_x = text_x
-        superficie = self.font.render(display_text, True, color_texto)
-        pantalla.blit(superficie, (text_x, text_y))
-
+        # Renderizado con scroll horizontal para que el cursor y la selección siempre sean visibles
+        pre_cursor = self.texto_usuario[:self.cursor_pos]
+        rendered_pre = self.font.render(pre_cursor, True, color_texto)
+        rendered_full = self.font.render(self.texto_usuario, True, color_texto)
+        scroll_offset = 0
+        if rendered_full.get_width() > max_text_width:
+            if rendered_pre.get_width() > max_text_width:
+                scroll_offset = rendered_pre.get_width() - max_text_width + 10
+            elif rendered_full.get_width() - rendered_pre.get_width() < max_text_width:
+                scroll_offset = rendered_full.get_width() - max_text_width
+        # Selección
+        if self._has_selection():
+            start, end = self._get_selection_range()
+            pre = self.texto_usuario[:start]
+            sel = self.texto_usuario[start:end]
+            rendered_pre = self.font.render(pre, True, color_texto)
+            rendered_sel = self.font.render(sel, True, color_texto)
+            sel_x = text_x + rendered_pre.get_width() - scroll_offset
+            sel_w = rendered_sel.get_width()
+            sel_rect = pygame.Rect(sel_x, text_y, sel_w, self.font.get_height())
+            pygame.draw.rect(pantalla, (200, 220, 255), sel_rect)
+        # Renderizar solo la parte visible
+        superficie = self.font.render(self.texto_usuario, True, color_texto)
+        visible_rect = pygame.Rect(scroll_offset, 0, max_text_width, superficie.get_height())
+        pantalla.blit(superficie, (text_x, text_y), area=visible_rect)
         # Cursor
         if self.cursor_visible and not esperando_respuesta:
-            if self.texto_usuario:
-                cursor_y = text_y
-                cursor_h = superficie.get_height()
-                if cursor_render_x < text_area_right:
-                    pygame.draw.line(pantalla, (255, 120, 120), (cursor_render_x, cursor_y),
-                                     (cursor_render_x, cursor_y + cursor_h), 2)
-            else:
-                # Si está vacío, cursor al inicio
-                cursor_y = text_y
-                cursor_h = superficie.get_height()
+            cursor_x = text_x + rendered_pre.get_width() - scroll_offset
+            cursor_y = text_y
+            cursor_h = superficie.get_height()
+            if cursor_x < text_area_right:
+                pygame.draw.line(pantalla, (255, 120, 120), (cursor_x, cursor_y),
+                                 (cursor_x, cursor_y + cursor_h), 2)
+            if not self.texto_usuario:
                 pygame.draw.line(pantalla, (255, 120, 120), (text_x, cursor_y),
                                  (text_x, cursor_y + cursor_h), 2)
 
@@ -294,6 +468,9 @@ class ChatInputManager:
     def clear_input(self):
         self.texto_usuario = ""
         self.cursor_pos = 0
+        self.selection_start = 0
+        self.selection_end = 0
+        self._undo_stack.clear()
 
     def get_text(self):
         return self.texto_usuario
