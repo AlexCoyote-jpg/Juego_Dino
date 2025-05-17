@@ -10,7 +10,7 @@ from ui.screen_manager import (
     ScreenManager, HomeScreen, JuegosScreen, ChatBotScreen, GameInstanceScreen,
     set_screen, handle_event_screen, update_screen, draw_screen
 )
-from ui.chatui import BotScreen
+from chatbot.interface.chatui import BotScreen
 class MenuPrincipal:
     def __init__(self, pantalla, fondo, images, sounds, config, screen_manager=None):
         self.pantalla = pantalla
