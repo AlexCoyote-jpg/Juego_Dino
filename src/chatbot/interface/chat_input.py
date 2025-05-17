@@ -9,15 +9,26 @@ class ChatInputManager:
         self.font = font
         self.scaler = scaler
         self.input_rect = input_rect
+        # Cargar el icono de enviar
+        icon_path = "A:/progetto/IHC/Juego_Dino/assets/imagenes/enviar.png"
+        try:
+            icon_img = pygame.image.load(icon_path).convert_alpha()
+        except Exception:
+            icon_img = None
+        btn_size = min(self.input_rect.height - 2, self.scaler.scale_x_value(48))
         self.boton_enviar = Boton(
-            texto="Enviar",
-            x=self.input_rect.right + self.scaler.scale_x_value(10),
-            y=self.input_rect.y,
-            ancho=self.scaler.scale_x_value(80),
-            alto=self.input_rect.height,
-            color_normal=(70, 130, 180),
-            color_hover=(100, 160, 210),
-            border_radius=12,
+            texto="",
+            x=self.input_rect.right - btn_size,
+            y=self.input_rect.y + (self.input_rect.height - btn_size) // 2,
+            ancho=btn_size,
+            alto=btn_size,
+            imagen=icon_img,
+            imagen_pos="center",
+            color_top=(255, 120, 120),
+            color_bottom=(255, 170, 200),
+            color_hover=(255, 140, 160),
+            border_radius=btn_size // 2,
+            estilo="round",
             on_click=on_send_callback
         )
         self.esperando_respuesta = False
@@ -38,47 +49,28 @@ class ChatInputManager:
         input_bg_color = (255, 255, 255)
         shadow_color = (230, 230, 230)
         border_radius = self.input_rect.height // 2
-        grad_color_left = (255, 120, 120)
-        grad_color_right = (255, 170, 200)
-        btn_margin = 0
-        btn_width = self.scaler.scale_x_value(110)
-        btn_height = self.input_rect.height - 2 * btn_margin
-        btn_rect = pygame.Rect(
-            self.input_rect.right - btn_width - btn_margin,
-            self.input_rect.y + btn_margin,
-            btn_width,
-            btn_height
-        )
         # Sombra neumórfica
         shadow_rect = self.input_rect.move(0, 6)
         pygame.draw.rect(pantalla, shadow_color, shadow_rect, border_radius=border_radius)
         # Fondo principal input
         pygame.draw.rect(pantalla, input_bg_color, self.input_rect, border_radius=border_radius)
-        # --- Botón gradiente usando utils ---
-        if self.texto_usuario.strip() and not esperando_respuesta:
-            grad_surf = get_gradient(btn_rect.width, btn_rect.height, grad_color_left, grad_color_right)
-            grad_mask = pygame.Surface((btn_rect.width, btn_rect.height), pygame.SRCALPHA)
-            pygame.draw.rect(grad_mask, (255, 255, 255, 255), grad_mask.get_rect(), border_radius=border_radius)
-            grad_surf = grad_surf.copy()
-            grad_surf.blit(grad_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
-            pantalla.blit(grad_surf, btn_rect.topleft)
-        else:
-            btn_disabled = pygame.Surface((btn_rect.width, btn_rect.height), pygame.SRCALPHA)
-            pygame.draw.rect(btn_disabled, (240, 240, 245), btn_disabled.get_rect(), border_radius=border_radius)
-            pantalla.blit(btn_disabled, btn_rect.topleft)
-        # --- Icono enviar ---
-        icon_path = "A:/progetto/IHC/Juego_Dino/assets/imagenes/enviar.png"
-        try:
-            icon_img = pygame.image.load(icon_path).convert_alpha()
-            icon_size = btn_height - 18
-            icon_img = pygame.transform.smoothscale(icon_img, (icon_size, icon_size))
-        except Exception:
-            icon_img = None
-        if icon_img:
-            icon_rect = icon_img.get_rect(center=btn_rect.center)
-            pantalla.blit(icon_img, icon_rect)
-        # --- Texto del input (solo renderizado simple, no mostrar_texto_adaptativo) ---
-        text_area_right = btn_rect.left - 16
+        # --- Botón round usando Boton ---
+        # Actualiza posición y tamaño del botón por si cambia el layout
+        btn_size = self.boton_enviar.ancho
+        self.boton_enviar.x = self.input_rect.right - btn_size
+        self.boton_enviar.y = self.input_rect.y + (self.input_rect.height - btn_size) // 2
+        self.boton_enviar.ancho = btn_size
+        self.boton_enviar.alto = btn_size
+        # Solo habilitado si hay texto y no esperando respuesta
+        self.boton_enviar.texto_visible = False
+        self.boton_enviar.imagen_pos = "center"
+        self.boton_enviar.color_top = (255, 120, 120) if self.texto_usuario.strip() and not esperando_respuesta else (240, 240, 245)
+        self.boton_enviar.color_bottom = (255, 170, 200) if self.texto_usuario.strip() and not esperando_respuesta else (240, 240, 245)
+        self.boton_enviar.color_hover = (255, 140, 160) if self.texto_usuario.strip() and not esperando_respuesta else (240, 240, 245)
+        self.boton_enviar.estilo = "round"
+        self.boton_enviar.draw(pantalla)
+        # --- Texto del input ---
+        text_area_right = self.boton_enviar.x - 16
         texto_display = self.texto_usuario or "Escribe tu mensaje..."
         color = (120, 120, 120) if self.texto_usuario else (180, 180, 185)
         superficie = self.font.render(texto_display, True, color)
@@ -94,7 +86,6 @@ class ChatInputManager:
         pantalla.blit(superficie, (text_x, text_y))
         # --- Cursor elegante ---
         if self.cursor_visible and self.texto_usuario and not esperando_respuesta:
-            # Medir el ancho del texto renderizado para el cursor
             superficie = self.font.render(self.texto_usuario, True, color)
             cursor_x = text_x + superficie.get_width() + 2
             if cursor_x < text_area_right:
@@ -106,10 +97,11 @@ class ChatInputManager:
     def update_layout(self, input_rect, font):
         self.input_rect = input_rect
         self.font = font
-        self.boton_enviar.x = self.input_rect.right + self.scaler.scale_x_value(10)
-        self.boton_enviar.y = self.input_rect.y
-        self.boton_enviar.ancho = self.scaler.scale_x_value(80)
-        self.boton_enviar.alto = self.input_rect.height
+        btn_size = min(self.input_rect.height - 2, self.scaler.scale_x_value(48))
+        self.boton_enviar.x = self.input_rect.right - btn_size
+        self.boton_enviar.y = self.input_rect.y + (self.input_rect.height - btn_size) // 2
+        self.boton_enviar.ancho = btn_size
+        self.boton_enviar.alto = btn_size
 
     def clear_input(self):
         self.texto_usuario = ""
