@@ -60,6 +60,8 @@ class ChatInputManager:
         self._loading_border_colors = ((255, 120, 120), (255, 170, 200))
         self._update_loading_border_points()
 
+        self.cursor_pos = 0  # posición del cursor en el texto
+
     def _update_loading_border_points(self):
         # Calcula y guarda los puntos del borde animado
         rect = self.input_rect.inflate(self._loading_border_thickness*2, self._loading_border_thickness*2)
@@ -128,18 +130,28 @@ class ChatInputManager:
                 try:
                     r = tk.Tk()
                     r.withdraw()
-                    self.texto_usuario += r.clipboard_get()
+                    clip = r.clipboard_get()
+                    self.texto_usuario = self.texto_usuario[:self.cursor_pos] + clip + self.texto_usuario[self.cursor_pos:]
+                    self.cursor_pos += len(clip)
                     r.destroy()
                 except Exception:
                     pass
             elif event.key == pygame.K_BACKSPACE:
-                if self.texto_usuario:
-                    self.texto_usuario = self.texto_usuario[:-1]
+                if self.cursor_pos > 0:
+                    self.texto_usuario = self.texto_usuario[:self.cursor_pos-1] + self.texto_usuario[self.cursor_pos:]
+                    self.cursor_pos -= 1
                 self.last_backspace_time = pygame.time.get_ticks()
                 self.backspace_first_press_time = self.last_backspace_time
                 self.backspace_held = True
+            elif event.key == pygame.K_LEFT:
+                if self.cursor_pos > 0:
+                    self.cursor_pos -= 1
+            elif event.key == pygame.K_RIGHT:
+                if self.cursor_pos < len(self.texto_usuario):
+                    self.cursor_pos += 1
             elif event.unicode and event.unicode.isprintable():
-                self.texto_usuario += event.unicode
+                self.texto_usuario = self.texto_usuario[:self.cursor_pos] + event.unicode + self.texto_usuario[self.cursor_pos:]
+                self.cursor_pos += 1
 
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_BACKSPACE:
@@ -154,11 +166,11 @@ class ChatInputManager:
         # Repetición de backspace con retardo inicial
         if self.backspace_held:
             current_time = pygame.time.get_ticks()
-            # Solo repetir si ha pasado el retardo inicial
             if current_time - self.backspace_first_press_time > self.backspace_repeat_delay:
                 if current_time - self.last_backspace_time >= self.backspace_delay:
-                    if self.texto_usuario:
-                        self.texto_usuario = self.texto_usuario[:-1]
+                    if self.cursor_pos > 0:
+                        self.texto_usuario = self.texto_usuario[:self.cursor_pos-1] + self.texto_usuario[self.cursor_pos:]
+                        self.cursor_pos -= 1
                     self.last_backspace_time = current_time
         # Parpadeo del cursor
         now = pygame.time.get_ticks()
@@ -195,23 +207,53 @@ class ChatInputManager:
         text_y = self.input_rect.y + (self.input_rect.height - superficie.get_height()) // 2
         max_text_width = text_area_right - text_x
 
-        if superficie.get_width() > max_text_width:
-            for i in range(len(texto_display), 0, -1):
-                recortado = texto_display[:i] + '...'
-                superficie = self.font.render(recortado, True, color_texto)
-                if superficie.get_width() <= max_text_width:
-                    break
+        # Recorte de texto si es necesario
+        display_text = self.texto_usuario
+        cursor_render_x = text_x
+        if self.texto_usuario:
+            # Calcular el texto visible y la posición del cursor
+            pre_cursor = self.texto_usuario[:self.cursor_pos]
+            suf_cursor = self.texto_usuario[self.cursor_pos:]
+            rendered_pre = self.font.render(pre_cursor, True, color_texto)
+            rendered_full = self.font.render(self.texto_usuario, True, color_texto)
+            if rendered_full.get_width() > max_text_width:
+                # Recortar por la derecha
+                for i in range(len(self.texto_usuario), 0, -1):
+                    recortado = self.texto_usuario[:i] + '...'
+                    superficie = self.font.render(recortado, True, color_texto)
+                    if superficie.get_width() <= max_text_width:
+                        display_text = recortado
+                        break
+                # Ajustar cursor_render_x para que siga el texto recortado
+                rendered_pre = self.font.render(pre_cursor, True, color_texto)
+                if rendered_pre.get_width() > max_text_width:
+                    # Si el cursor está fuera, lo pegamos al final
+                    cursor_render_x = text_x + max_text_width
+                else:
+                    cursor_render_x = text_x + rendered_pre.get_width()
+            else:
+                display_text = self.texto_usuario
+                cursor_render_x = text_x + rendered_pre.get_width()
+        else:
+            display_text = "Escribe tu mensaje..."
+            cursor_render_x = text_x
+        superficie = self.font.render(display_text, True, color_texto)
         pantalla.blit(superficie, (text_x, text_y))
 
         # Cursor
-        if self.cursor_visible and self.texto_usuario and not esperando_respuesta:
-            superficie = self.font.render(self.texto_usuario, True, color_texto)
-            cursor_x = text_x + superficie.get_width() + 2
-            if cursor_x < text_area_right:
+        if self.cursor_visible and not esperando_respuesta:
+            if self.texto_usuario:
                 cursor_y = text_y
                 cursor_h = superficie.get_height()
-                pygame.draw.line(pantalla, (255, 120, 120), (cursor_x, cursor_y),
-                                 (cursor_x, cursor_y + cursor_h), 2)
+                if cursor_render_x < text_area_right:
+                    pygame.draw.line(pantalla, (255, 120, 120), (cursor_render_x, cursor_y),
+                                     (cursor_render_x, cursor_y + cursor_h), 2)
+            else:
+                # Si está vacío, cursor al inicio
+                cursor_y = text_y
+                cursor_h = superficie.get_height()
+                pygame.draw.line(pantalla, (255, 120, 120), (text_x, cursor_y),
+                                 (text_x, cursor_y + cursor_h), 2)
 
     def draw_loading_bar(self, pantalla):
         # Barra de carga que rodea todo el input area (borde exterior animado, siguiendo el borde redondeado)
@@ -251,6 +293,7 @@ class ChatInputManager:
 
     def clear_input(self):
         self.texto_usuario = ""
+        self.cursor_pos = 0
 
     def get_text(self):
         return self.texto_usuario
