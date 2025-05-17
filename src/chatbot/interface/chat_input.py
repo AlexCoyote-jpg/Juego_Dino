@@ -169,6 +169,10 @@ class ChatInputManager:
         return left
 
     def handle_event(self, event, esperando_respuesta):
+        # Reenviar eventos de mouse al botón de enviar
+        if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+            self.boton_enviar.handle_event(event)
+
         if event.type == pygame.KEYDOWN:
             mods = pygame.key.get_mods()
             shift = mods & pygame.KMOD_SHIFT
