@@ -1,15 +1,17 @@
 import pygame
 from ui.components.utils import dibujar_caja_texto
 from ui.components.scroll import dibujar_barra_scroll
+from ui.components.emoji_utils import render_texto_emojis
 
 BUBBLE_PADDING = 14
 
 # Renderizado de burbujas y chat
 
 def draw_burbuja(pantalla, font, chat_x, chat_w, linea, color, bg, ali, y):
-    text_surf = font.render(linea, True, color)
+    # Soporte para emojis: usar render_texto_emojis en vez de font.render
+    text_surf, (w, h) = render_texto_emojis(linea, font.get_height(), color)
     text_rect = text_surf.get_rect()
-    line_height = font.get_linesize()
+    line_height = h
     vertical_padding = max(8, int(line_height * 0.25))
     bubble_rect = text_rect.inflate(BUBBLE_PADDING * 2, vertical_padding * 2)
     if ali == "der":
@@ -24,7 +26,9 @@ def draw_burbuja(pantalla, font, chat_x, chat_w, linea, color, bg, ali, y):
 def render_chat(pantalla, chat_x, chat_y, chat_w, chat_h, font, _scroll_offset, _render_cache, _total_chat_height, _thumb_rect_ref):
     dibujar_caja_texto(pantalla, chat_x, chat_y, chat_w, chat_h,
                        (245, 245, 255, 220), radius=18)
-    line_height = font.get_linesize() + max(8, int(font.get_linesize() * 0.25)) * 2
+    # Ajustar el cálculo de altura de línea usando render_texto_emojis
+    sample_surf, (sample_w, sample_h) = render_texto_emojis("A", font.get_height())
+    line_height = sample_h + max(8, int(sample_h * 0.25)) * 2
     chat_area_h = chat_h
     chat_clip_rect = pygame.Rect(chat_x, chat_y, chat_w - 20, chat_h)
     pantalla.set_clip(chat_clip_rect)
@@ -36,11 +40,10 @@ def render_chat(pantalla, chat_x, chat_y, chat_w, chat_h, font, _scroll_offset, 
             continue
         if y > chat_y + chat_h:
             break
-        # Se asume que la función draw_burbuja está disponible en el contexto de BotScreen
-        # Por lo tanto, el llamador debe pasar una función draw_burbuja adecuada si se requiere
-        # Aquí solo se deja el renderizado de la burbuja como callback opcional
         if hasattr(render_chat, 'draw_burbuja_cb'):
             render_chat.draw_burbuja_cb(pantalla, linea, color, bg, ali, y)
+        else:
+            draw_burbuja(pantalla, font, chat_x, chat_w, linea, color, bg, ali, y)
         y += line_height
     pantalla.set_clip(None)
     if _total_chat_height > chat_area_h:
