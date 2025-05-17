@@ -164,29 +164,47 @@ class BotScreen:
 
     def _actualizar_render_cache(self):
         """
-        Reconstruye la caché de renderizado del chat basándose en el historial.
+        Reconstruye la caché de renderizado del chat basándose en el historial, optimizado para mayor ligereza y eficiencia.
         """
-        mensajes, alturas = [], []
-        ancho_texto = self.chat_w - 40
-        line_height = self.font.get_linesize() + max(8, int(self.font.get_linesize() * 0.25)) * 2
         with self._hist_lock:
             historial = self.chatbot.obtener_historial()[-100:]
+        if not historial:
+            self._render_cache = []
+            self._mensajes_altos = []
+            self._total_chat_height = 0
+            self._layout_dirty = False
+            self._render_cache_dirty = False
+            return
+
+        mensajes = []
+        alturas = []
+        ancho_texto = self.chat_w - 40
+        font = self.font
+        line_height = font.get_linesize() + max(8, int(font.get_linesize() * 0.25)) * 2
+        esperando = self.esperando_respuesta
+        typing_index = self.typing_animation_index
+
         for autor, texto in historial:
             if not isinstance(texto, str):
                 continue
-            color_texto = (70, 130, 180) if autor == "bot" else (0, 0, 0)
-            bg_color = (230, 240, 255) if autor == "bot" else (255, 255, 255)
-            alineacion = "izq" if autor == "bot" else "der"
-            if autor == "bot" and texto == "" and self.esperando_respuesta:
-                texto = "Escribiendo" + "." * self.typing_animation_index
-            for linea in wrap_text(texto, self.font, ancho_texto):
+            if autor == "bot":
+                color_texto = (70, 130, 180)
+                bg_color = (230, 240, 255)
+                alineacion = "izq"
+                if texto == "" and esperando:
+                    texto = f"Escribiendo{'.' * typing_index}"
+            else:
+                color_texto = (0, 0, 0)
+                bg_color = (255, 255, 255)
+                alineacion = "der"
+            for linea in wrap_text(texto, font, ancho_texto):
                 mensajes.append((linea, color_texto, bg_color, alineacion))
                 alturas.append(line_height)
         self._render_cache = mensajes
         self._mensajes_altos = alturas
         self._total_chat_height = sum(alturas)
-        self._layout_dirty = False  # Layout actualizado
-        self._render_cache_dirty = False  # Caché de renderizado actualizada
+        self._layout_dirty = False
+        self._render_cache_dirty = False
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
