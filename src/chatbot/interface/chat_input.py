@@ -417,6 +417,12 @@ class ChatInputManager:
         superficie = self.font.render(self.texto_usuario, True, color_texto)
         visible_rect = pygame.Rect(scroll_offset, 0, max_text_width, superficie.get_height())
         pantalla.blit(superficie, (text_x, text_y), area=visible_rect)
+        # Placeholder si está vacío
+        if not self.texto_usuario:
+            placeholder = "Escribe un mensaje..."
+            placeholder_color = (200, 200, 210)
+            placeholder_surf = self.font.render(placeholder, True, placeholder_color)
+            pantalla.blit(placeholder_surf, (text_x, text_y))
         # Cursor
         if self.cursor_visible and not esperando_respuesta:
             cursor_x = text_x + rendered_pre.get_width() - scroll_offset
