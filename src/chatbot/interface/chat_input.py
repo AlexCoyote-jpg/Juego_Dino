@@ -169,6 +169,15 @@ class ChatInputManager:
                 return True
         return False
 
+    def _calcular_scroll_offset(self, rendered_pre, rendered_full, max_width):
+        """Calcula el scroll horizontal necesario para que el cursor y el texto sean visibles."""
+        if rendered_full.get_width() > max_width:
+            if rendered_pre.get_width() > max_width:
+                return rendered_pre.get_width() - max_width + 10
+            elif rendered_full.get_width() - rendered_pre.get_width() < max_width:
+                return rendered_full.get_width() - max_width
+        return 0
+
     def handle_event(self, event, esperando_respuesta):
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
             self.boton_enviar.handle_event(event)
@@ -267,16 +276,12 @@ class ChatInputManager:
         elif event.type == pygame.MOUSEBUTTONDOWN and not esperando_respuesta:
             mx, my = event.pos
             text_area_right = self.boton_enviar.x - 16
-            text_x = self.input_rect.x + 28
+            text_area_left = self.boton_voz.x + self.boton_voz.ancho + 8
+            text_x = text_area_left
             max_text_width = text_area_right - text_x
             rendered_full = self.font.render(self.texto_usuario, True, (120, 120, 120) if self.texto_usuario else (180, 180, 185))
             rendered_pre = self.font.render(self.texto_usuario[:self.cursor_pos], True, (120, 120, 120) if self.texto_usuario else (180, 180, 185))
-            scroll_offset = 0
-            if rendered_full.get_width() > max_text_width:
-                if rendered_pre.get_width() > max_text_width:
-                    scroll_offset = rendered_pre.get_width() - max_text_width + 10
-                elif rendered_full.get_width() - rendered_pre.get_width() < max_text_width:
-                    scroll_offset = rendered_full.get_width() - max_text_width
+            scroll_offset = self._calcular_scroll_offset(rendered_pre, rendered_full, max_text_width)
             if self.input_rect.collidepoint(mx, my):
                 idx = self._get_char_index_from_mouse(mx, text_x, scroll_offset)
                 self.cursor_pos = idx
@@ -285,16 +290,12 @@ class ChatInputManager:
         elif event.type == pygame.MOUSEMOTION and self._mouse_selecting and not esperando_respuesta:
             mx, my = event.pos
             text_area_right = self.boton_enviar.x - 16
-            text_x = self.input_rect.x + 28
+            text_area_left = self.boton_voz.x + self.boton_voz.ancho + 8
+            text_x = text_area_left
             max_text_width = text_area_right - text_x
             rendered_full = self.font.render(self.texto_usuario, True, (120, 120, 120) if self.texto_usuario else (180, 180, 185))
             rendered_pre = self.font.render(self.texto_usuario[:self.cursor_pos], True, (120, 120, 120) if self.texto_usuario else (180, 180, 185))
-            scroll_offset = 0
-            if rendered_full.get_width() > max_text_width:
-                if rendered_pre.get_width() > max_text_width:
-                    scroll_offset = rendered_pre.get_width() - max_text_width + 10
-                elif rendered_full.get_width() - rendered_pre.get_width() < max_text_width:
-                    scroll_offset = rendered_full.get_width() - max_text_width
+            scroll_offset = self._calcular_scroll_offset(rendered_pre, rendered_full, max_text_width)
             if self.input_rect.collidepoint(mx, my):
                 idx = self._get_char_index_from_mouse(mx, text_x, scroll_offset)
                 self.cursor_pos = idx
@@ -355,12 +356,7 @@ class ChatInputManager:
         pre_cursor = self.texto_usuario[:self.cursor_pos]
         rendered_pre = self.font.render(pre_cursor, True, color_texto)
         rendered_full = self.font.render(self.texto_usuario, True, color_texto)
-        scroll_offset = 0
-        if rendered_full.get_width() > max_text_width:
-            if rendered_pre.get_width() > max_text_width:
-                scroll_offset = rendered_pre.get_width() - max_text_width + 10
-            elif rendered_full.get_width() - rendered_pre.get_width() < max_text_width:
-                scroll_offset = rendered_full.get_width() - max_text_width
+        scroll_offset = self._calcular_scroll_offset(rendered_pre, rendered_full, max_text_width)
         if self._has_selection():
             start, end = self._get_selection_range()
             pre = self.texto_usuario[:start]
