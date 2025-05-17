@@ -38,7 +38,7 @@ class ChatInputManager:
         btn_size = min(self.input_rect.height - 2, self.scaler.scale_x_value(48))
         self.btn_size = btn_size
         # Botón enviar
-        icon_img = self._load_icon("A:/progetto/IHC/Juego_Dino/assets/imagenes/enviar.png", btn_size)
+        icon_img = self._load_icon("assets/imagenes/enviar.png", btn_size)
         self.boton_enviar = Boton(
             texto="",
             x=self.input_rect.right - btn_size,
@@ -55,7 +55,7 @@ class ChatInputManager:
             on_click=on_send_callback
         )
         # Botón voz
-        voz_img = self._load_icon("A:/progetto/IHC/Juego_Dino/assets/imagenes/voz.png", btn_size)
+        voz_img = self._load_icon("assets/imagenes/voz.png", btn_size)
         voz_btn_x = self.input_rect.x + 8
         voz_btn_y = self.input_rect.y + (self.input_rect.height - btn_size) // 2
         self.boton_voz = Boton(
