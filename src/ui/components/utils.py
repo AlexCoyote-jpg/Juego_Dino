@@ -355,21 +355,28 @@ class Boton:
             scale = min(max_img_w / img_rect.width, max_img_h / img_rect.height, 1.0)
             new_w = int(img_rect.width * scale)
             new_h = int(img_rect.height * scale)
-            img = pygame.transform.smoothscale(img, (new_w, new_h))
-            img_rect = img.get_rect()
-            if self.imagen_pos == "left":
-                img_rect.topleft = (area.x, area.y + (area.height - img_rect.height) // 2)
-            elif self.imagen_pos == "right":
-                img_rect.topright = (area.right, area.y + (area.height - img_rect.height) // 2)
-            elif self.imagen_pos == "top":
-                img_rect.midtop = (area.centerx, area.y)
-            elif self.imagen_pos == "bottom":
-                img_rect.midbottom = (area.centerx, area.bottom)
-            elif self.imagen_pos == "center":
-                img_rect.center = area.center
+            # Prevent negative or zero sizes for scaling
+            if new_w > 0 and new_h > 0:
+                img = pygame.transform.smoothscale(img, (new_w, new_h))
+                img_rect = img.get_rect()
             else:
-                img_rect.topleft = (area.x, area.y)
-            pantalla.blit(img, img_rect)
+                # Skip scaling and drawing if size is invalid
+                img = None
+                img_rect = pygame.Rect(0, 0, 0, 0)
+            if img:
+                if self.imagen_pos == "left":
+                    img_rect.topleft = (area.x, area.y + (area.height - img_rect.height) // 2)
+                elif self.imagen_pos == "right":
+                    img_rect.topright = (area.right, area.y + (area.height - img_rect.height) // 2)
+                elif self.imagen_pos == "top":
+                    img_rect.midtop = (area.centerx, area.y)
+                elif self.imagen_pos == "bottom":
+                    img_rect.midbottom = (area.centerx, area.bottom)
+                elif self.imagen_pos == "center":
+                    img_rect.center = area.center
+                else:
+                    img_rect.topleft = (area.x, area.y)
+                pantalla.blit(img, img_rect)
 
         # Layout texto adaptativo
         if self.texto_visible and self.texto:
