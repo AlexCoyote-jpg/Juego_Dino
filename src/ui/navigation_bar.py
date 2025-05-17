@@ -181,16 +181,16 @@ class NavigationBar:
         self.tooltip_manager.draw(surface)
 
     def handle_event(self, event, logo=None, logo_height=None):
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                self.selected = (self.selected - 1) % len(self.options)
-                return self.selected
-            elif event.key == pygame.K_RIGHT:
-                self.selected = (self.selected + 1) % len(self.options)
-                return self.selected
+        #if event.type == pygame.KEYDOWN:
+            #if event.key == pygame.K_LEFT:
+                #self.selected = (self.selected - 1) % len(self.options)
+                #return self.selected
+            #elif event.key == pygame.K_RIGHT:
+                #self.selected = (self.selected + 1) % len(self.options)
+                #return self.selected
             #elif event.key == pygame.K_RETURN:
                 #return self.selected
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = event.pos
             for idx, boton in enumerate(self.botones):
                 if boton.collidepoint(mouse_pos):

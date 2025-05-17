@@ -17,6 +17,9 @@ class ChatInputManager:
 
         self.last_backspace_time = 0
         self.backspace_delay = 50  # ms
+        self.backspace_repeat_delay = 300  # ms (retardo inicial para repetición)
+        self.backspace_held = False
+        self.backspace_first_press_time = 0
 
         self.esperando_respuesta = False
 
@@ -26,9 +29,11 @@ class ChatInputManager:
             icon_img = pygame.image.load(icon_path).convert_alpha()
         except Exception:
             icon_img = None
-
         btn_size = min(self.input_rect.height - 2, self.scaler.scale_x_value(48))
         self.btn_size = btn_size
+        # Redimensionar icono si es necesario
+        if icon_img is not None and (icon_img.get_width() != btn_size or icon_img.get_height() != btn_size):
+            icon_img = pygame.transform.smoothscale(icon_img, (btn_size, btn_size))
         self.boton_enviar = Boton(
             texto="",
             x=self.input_rect.right - btn_size,
@@ -45,6 +50,76 @@ class ChatInputManager:
             on_click=on_send_callback
         )
 
+        # Precalcular puntos del borde de la barra de carga
+        self._loading_border_points = []
+        self._loading_border_perimeter = 0
+        self._loading_border_chunk_len = 0
+        self._loading_border_r = 0
+        self._loading_border_thickness = 4
+        self._loading_border_last_rect = None
+        self._loading_border_colors = ((255, 120, 120), (255, 170, 200))
+        self._update_loading_border_points()
+
+    def _update_loading_border_points(self):
+        # Calcula y guarda los puntos del borde animado
+        rect = self.input_rect.inflate(self._loading_border_thickness*2, self._loading_border_thickness*2)
+        w, h = rect.width, rect.height
+        border_radius = self.input_rect.height // 2
+        r = border_radius + 2
+        self._loading_border_r = r
+        # Robustez: evitar negativos
+        w_line = max(1, w - 2*r)
+        h_line = max(1, h - 2*r)
+        points = []
+        # Top line
+        for i in range(w_line):
+            x = rect.left + r + i
+            y = rect.top
+            points.append((x, y))
+        # Top-right arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.right - r + r * math.cos(angle)
+            y = rect.top + r - r * math.sin(angle)
+            points.append((x, y))
+        # Right line
+        for i in range(h_line):
+            x = rect.right
+            y = rect.top + r + i
+            points.append((x, y))
+        # Bottom-right arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.right - r + r * math.cos(angle)
+            y = rect.bottom - r + r * math.sin(angle)
+            points.append((x, y))
+        # Bottom line
+        for i in range(w_line):
+            x = rect.right - r - i
+            y = rect.bottom
+            points.append((x, y))
+        # Bottom-left arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.left + r - r * math.cos(angle)
+            y = rect.bottom - r + r * math.sin(angle)
+            points.append((x, y))
+        # Left line
+        for i in range(h_line):
+            x = rect.left
+            y = rect.bottom - r - i
+            points.append((x, y))
+        # Top-left arc
+        for i in range(0, 91, 2):
+            angle = (i / 180) * math.pi
+            x = rect.left + r - r * math.cos(angle)
+            y = rect.top + r - r * math.sin(angle)
+            points.append((x, y))
+        self._loading_border_points = points
+        self._loading_border_perimeter = len(points)
+        self._loading_border_chunk_len = int(self._loading_border_perimeter * 0.18)
+        self._loading_border_last_rect = rect
+
     def handle_event(self, event, esperando_respuesta):
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
@@ -58,10 +133,17 @@ class ChatInputManager:
                 except Exception:
                     pass
             elif event.key == pygame.K_BACKSPACE:
-                self.texto_usuario = self.texto_usuario[:-1]
+                if self.texto_usuario:
+                    self.texto_usuario = self.texto_usuario[:-1]
                 self.last_backspace_time = pygame.time.get_ticks()
+                self.backspace_first_press_time = self.last_backspace_time
+                self.backspace_held = True
             elif event.unicode and event.unicode.isprintable():
                 self.texto_usuario += event.unicode
+
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_BACKSPACE:
+                self.backspace_held = False
 
         elif event.type == pygame.MOUSEBUTTONDOWN and not esperando_respuesta:
             self.boton_enviar.handle_event(event)
@@ -69,14 +151,15 @@ class ChatInputManager:
         return None
 
     def update(self):
-        # Repetición de backspace
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_BACKSPACE]:
+        # Repetición de backspace con retardo inicial
+        if self.backspace_held:
             current_time = pygame.time.get_ticks()
-            if current_time - self.last_backspace_time >= self.backspace_delay:
-                self.texto_usuario = self.texto_usuario[:-1]
-                self.last_backspace_time = current_time
-
+            # Solo repetir si ha pasado el retardo inicial
+            if current_time - self.backspace_first_press_time > self.backspace_repeat_delay:
+                if current_time - self.last_backspace_time >= self.backspace_delay:
+                    if self.texto_usuario:
+                        self.texto_usuario = self.texto_usuario[:-1]
+                    self.last_backspace_time = current_time
         # Parpadeo del cursor
         now = pygame.time.get_ticks()
         if now - self.last_cursor_toggle > self.cursor_interval:
@@ -133,79 +216,38 @@ class ChatInputManager:
     def draw_loading_bar(self, pantalla):
         # Barra de carga que rodea todo el input area (borde exterior animado, siguiendo el borde redondeado)
         border_radius = self.input_rect.height // 2
-        bar_thickness = 4
-        time_ms = pygame.time.get_ticks()
-        w, h = self.input_rect.width, self.input_rect.height
-        # Perímetro real: lados rectos + arcos de esquinas
-        arc_len = 0.5 * 3.1416 * border_radius * 4  # 4 esquinas
-        line_len = 2 * (w - 2 * border_radius) + 2 * (h - 2 * border_radius)
-        perimeter = arc_len + line_len
-        # Animación: segmento móvil
-        progress = (time_ms // 3) % int(perimeter)
-        chunk_len = int(perimeter * 0.18)
-        # Dibuja fondo del borde
-        pygame.draw.rect(pantalla, (230, 230, 230), self.input_rect.inflate(bar_thickness*2, bar_thickness*2),
-                         width=bar_thickness, border_radius=border_radius+2)
-        # Prepara puntos a lo largo del borde redondeado
-        n_segments = int(perimeter // 2)
-        points = []
+        bar_thickness = self._loading_border_thickness
+        # Si el rect cambió, recalcula puntos
         rect = self.input_rect.inflate(bar_thickness*2, bar_thickness*2)
-        r = border_radius + 2
-        # Top line
-        for i in range(int(w - 2*r)):
-            x = rect.left + r + i
-            y = rect.top
-            points.append((x, y))
-        # Top-right arc
-        for i in range(0, 91, 2):
-            angle = (i / 180) * math.pi
-            x = rect.right - r + r * math.cos(angle)
-            y = rect.top + r - r * math.sin(angle)
-            points.append((x, y))
-        # Right line
-        for i in range(int(h - 2*r)):
-            x = rect.right
-            y = rect.top + r + i
-            points.append((x, y))
-        # Bottom-right arc
-        for i in range(0, 91, 2):
-            angle = (i / 180) * math.pi
-            x = rect.right - r + r * math.cos(angle)
-            y = rect.bottom - r + r * math.sin(angle)
-            points.append((x, y))
-        # Bottom line
-        for i in range(int(w - 2*r)):
-            x = rect.right - r - i
-            y = rect.bottom
-            points.append((x, y))
-        # Bottom-left arc
-        for i in range(0, 91, 2):
-            angle = (i / 180) * math.pi
-            x = rect.left + r - r * math.cos(angle)
-            y = rect.bottom - r + r * math.sin(angle)
-            points.append((x, y))
-        # Left line
-        for i in range(int(h - 2*r)):
-            x = rect.left
-            y = rect.bottom - r - i
-            points.append((x, y))
-        # Top-left arc
-        for i in range(0, 91, 2):
-            angle = (i / 180) * math.pi
-            x = rect.left + r - r * math.cos(angle)
-            y = rect.top + r - r * math.sin(angle)
-            points.append((x, y))
-        # Dibuja segmento animado
-        for i in range(len(points)):
-            seg_pos = (progress + i) % len(points)
-            if seg_pos < chunk_len:
-                x, y = points[i]
-                pygame.draw.circle(pantalla, (255, 120, 120), (int(x), int(y)), bar_thickness//2+1)
+        if self._loading_border_last_rect is None or self._loading_border_last_rect.size != rect.size or self._loading_border_last_rect.topleft != rect.topleft:
+            self._update_loading_border_points()
+        time_ms = pygame.time.get_ticks()
+        perimeter = self._loading_border_perimeter
+        progress = (time_ms // 3) % perimeter
+        chunk_len = self._loading_border_chunk_len
+        color1, color2 = self._loading_border_colors
+        # Dibuja fondo del borde
+        pygame.draw.rect(pantalla, (230, 230, 230), rect, width=bar_thickness, border_radius=border_radius+2)
+        # Dibuja segmento animado con gradiente
+        for i in range(chunk_len):
+            idx = (progress + i) % perimeter
+            fade = i / chunk_len
+            color = (
+                int(color1[0] + (color2[0] - color1[0]) * fade),
+                int(color1[1] + (color2[1] - color1[1]) * fade),
+                int(color1[2] + (color2[2] - color1[2]) * fade)
+            )
+            x, y = self._loading_border_points[idx]
+            pygame.draw.circle(pantalla, color, (int(x), int(y)), bar_thickness//2+1)
 
     def update_layout(self, input_rect, font):
         self.input_rect = input_rect
         self.font = font
         self.btn_size = min(self.input_rect.height - 2, self.scaler.scale_x_value(48))
+        # Redimensionar icono si es necesario
+        if self.boton_enviar.imagen is not None and (self.boton_enviar.imagen.get_width() != self.btn_size or self.boton_enviar.imagen.get_height() != self.btn_size):
+            self.boton_enviar.imagen = pygame.transform.smoothscale(self.boton_enviar.imagen, (self.btn_size, self.btn_size))
+        self._update_loading_border_points()
 
     def clear_input(self):
         self.texto_usuario = ""
