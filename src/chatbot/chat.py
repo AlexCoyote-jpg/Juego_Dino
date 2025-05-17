@@ -1,5 +1,6 @@
 from chatbot.Conexion import obtener_respuesta
 from chatbot.Configs import LLAMA
+from chatbot.voz import hablar, detener
 import logging
 from typing import List, Tuple, Optional
 
@@ -35,3 +36,19 @@ class ChatBot:
 
     def obtener_historial(self) -> List[Tuple[str, str]]:
         return self.historial
+
+    def hablar_ultimo_mensaje_bot(self):
+        '''Convierte el último mensaje del bot en audio usando síntesis de voz.'''
+        print("[DEBUG] Llamada a hablar_ultimo_mensaje_bot")
+        # Buscar el último mensaje del bot que no esté vacío
+        for autor, texto in reversed(self.historial):
+            print(f"[DEBUG] Revisando mensaje: autor={autor}, texto={texto!r}")
+            if autor == "bot" and texto.strip():
+                print(f"[DEBUG] Hablando: {texto}")
+                hablar(texto)
+                break
+
+    def detener_audio(self):
+        '''Detiene la reproducción de audio si hay un mensaje en curso.'''
+        print("[DEBUG] Llamada a detener_audio")
+        detener()

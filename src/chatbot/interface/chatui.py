@@ -58,7 +58,7 @@ class BotScreen:
 
         # Inicializar ChatInputManager
         self.input_manager = ChatInputManager(
-            self.scaler, self.input_rect, self.font, self.enviar_mensaje
+            self.scaler, self.input_rect, self.font, self.enviar_mensaje, chatbot=self.chatbot
         )
 
         self._layout_dirty = True  # Marca si el layout necesita actualizarse
