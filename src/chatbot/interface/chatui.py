@@ -196,18 +196,13 @@ class BotScreen:
                                            self.chat_h, self.chat_y, bar_rect)
 
     def update(self, dt):
-        now = pygame.time.get_ticks()
-        # Solo actualiza el cursor cada 500ms
-        if now % 1000 < 500:
-            if not self.input_manager.cursor_visible:
-                self.input_manager.set_cursor_visible(True)
-        else:
-            if self.input_manager.cursor_visible:
-                self.input_manager.set_cursor_visible(False)
         self._scroll_offset = self.scroll_manager.update(
             max(0, self._total_chat_height - self.chat_h), smooth=True
         )
+        self.input_manager.update()  # El input gestiona el parpadeo del cursor y backspace
+
         if self.esperando_respuesta:
+            now = pygame.time.get_ticks()
             typing_index = (now // 300) % 4
             if typing_index != self._last_typing_index:
                 self.typing_animation_index = typing_index
@@ -237,6 +232,9 @@ class BotScreen:
             thumb_rect_ref
         )
         self._thumb_rect = thumb_rect_ref[0]
+        # Actualiza el input (parpadeo cursor, repetición backspace, etc)
+        self.input_manager.update()
+        # Dibuja el input
         self.input_manager.draw(pantalla, self.esperando_respuesta)
 
     def _draw_burbuja(self, pantalla, linea, color, bg, ali, y):
